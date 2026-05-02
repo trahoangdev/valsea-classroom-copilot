@@ -1,5 +1,5 @@
 import { env, assertLlmKey } from "./env.js";
-import type { LearningOutput } from "./types.js";
+import type { LearningOutput, LiveChunkAssist } from "./types.js";
 
 const SYSTEM_USER_PROMPT = `You are a classroom learning assistant for Vietnamese university students.
 
@@ -113,6 +113,88 @@ function coerceOutput(raw: Record<string, unknown>): LearningOutput {
     quizQuestions,
     possibleConfusingPoints,
   };
+}
+
+const LIVE_CHUNK_PROMPT = `You help students during a live Vietnamese–English code-switching lecture.
+
+You receive ONE short transcript segment (may mix Vietnamese and English technical terms).
+
+Return valid JSON with exactly these keys:
+- microSummaryVi (string): 1–2 sentences in simple Vietnamese — what this segment is about.
+- explainVi (string): 1–3 short sentences in simple Vietnamese clarifying the segment for students.
+- lineEn (string): One or two sentences in natural English — same meaning as the segment (translation / recap). Keep technical terms in standard English.
+
+Rules:
+- Do not invent facts not present in the segment.
+- If the segment is too short or unclear, use brief honest placeholders like "Đoạn quá ngắn." and a minimal lineEn.
+- Respond with JSON only, no markdown fences.`;
+
+function coerceLiveChunk(raw: Record<string, unknown>): LiveChunkAssist {
+  const micro =
+    typeof raw.microSummaryVi === "string"
+      ? raw.microSummaryVi
+      : typeof raw.micro_summary_vi === "string"
+        ? raw.micro_summary_vi
+        : "";
+  const explain =
+    typeof raw.explainVi === "string"
+      ? raw.explainVi
+      : typeof raw.explain_vi === "string"
+        ? raw.explain_vi
+        : "";
+  const line =
+    typeof raw.lineEn === "string"
+      ? raw.lineEn
+      : typeof raw.line_en === "string"
+        ? raw.line_en
+        : "";
+  return { microSummaryVi: micro, explainVi: explain, lineEn: line };
+}
+
+/**
+ * Small, fast LLM call for one transcript chunk — used when "live assist" is enabled.
+ * Returns null if input empty or LLM unusable.
+ */
+export async function generateLiveChunkAssist(segment: string): Promise<LiveChunkAssist | null> {
+  assertLlmKey();
+  const text = segment.trim();
+  if (!text) return null;
+
+  const url = `${env.llmBaseUrl}/chat/completions`;
+  const body = {
+    model: env.llmModel,
+    temperature: 0.2,
+    max_tokens: 380,
+    response_format: { type: "json_object" },
+    messages: [
+      { role: "system", content: LIVE_CHUNK_PROMPT },
+      { role: "user", content: JSON.stringify({ segment: text.slice(0, 1200) }) },
+    ],
+  };
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.llmApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`LLM live assist failed: ${res.status} ${t}`);
+  }
+
+  const data = (await res.json()) as {
+    choices?: { message?: { content?: string } }[];
+  };
+  const content = data.choices?.[0]?.message?.content;
+  if (!content || typeof content !== "string") return null;
+
+  const parsed = extractJsonObject(content);
+  if (!parsed) return null;
+  return coerceLiveChunk(parsed);
 }
 
 export async function generateLearning(transcript: string): Promise<LearningOutput> {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { forwardRef, useEffect, useRef } from "react";
 import { Mic } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -10,17 +10,36 @@ type Props = {
   finals: { id: string; text: string }[];
 };
 
-export function LiveTranscript({ partial, finals }: Props) {
+/** Scroll inside the transcript ScrollArea only — avoids scrolling the page down onto Live assist. */
+function scrollTranscriptViewportToBottom(anchor: HTMLElement | null): void {
+  if (!anchor) return;
+  const viewport = anchor.closest("[data-slot='scroll-area-viewport']");
+  if (viewport instanceof HTMLElement) {
+    viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
+    return;
+  }
+  anchor.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+export const LiveTranscript = forwardRef<HTMLDivElement, Props>(function LiveTranscript(
+  { partial, finals },
+  ref
+) {
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    scrollTranscriptViewportToBottom(bottomRef.current);
   }, [partial, finals.length]);
 
   const empty = finals.length === 0 && !partial;
 
   return (
-    <Card className="flex h-full min-h-[420px] flex-col gap-0 py-0">
+    <div
+      ref={ref}
+      tabIndex={-1}
+      className="min-h-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2"
+    >
+      <Card className="flex h-full min-h-[420px] flex-col gap-0 py-0">
       <CardHeader className="border-b px-6 py-4">
         <CardTitle className="text-lg">Live transcript</CardTitle>
         <CardDescription>
@@ -73,5 +92,8 @@ export function LiveTranscript({ partial, finals }: Props) {
         </ScrollArea>
       </CardContent>
     </Card>
+    </div>
   );
-}
+});
+
+LiveTranscript.displayName = "LiveTranscript";

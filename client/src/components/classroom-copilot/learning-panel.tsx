@@ -75,7 +75,7 @@ export function LearningPanel({ output, transcriptText, sessionId, generating }:
   };
 
   return (
-    <Card className="flex h-full min-h-[420px] flex-col gap-0 py-0">
+    <Card className="flex min-h-[420px] w-full flex-col gap-0 py-0">
       <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4 border-b px-6 py-4">
         <div>
           <CardTitle className="text-lg">Learning notes</CardTitle>

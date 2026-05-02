@@ -13,7 +13,16 @@ export type FrontendToBackend =
   | { type: "audio.chunk"; sessionId: string; audio: string }
   | { type: "session.stop"; sessionId: string }
   | { type: "learning.generate"; sessionId: string }
-  | { type: "confusion.mark"; sessionId: string; note: string };
+  | { type: "confusion.mark"; sessionId: string; note: string }
+  | { type: "liveAssist.set"; sessionId: string; enabled: boolean };
+
+/** Lightweight LLM output per finalized transcript segment (hackathon track: live assist). */
+export type LiveChunkAssist = {
+  microSummaryVi: string;
+  explainVi: string;
+  /** Natural English for this segment — translation / recap for bilingual students. */
+  lineEn: string;
+};
 
 export type BackendToFrontend =
   | { type: "session.status"; status: SessionUiStatus }
@@ -26,6 +35,12 @@ export type BackendToFrontend =
         endTime: number;
         text: string;
       };
+    }
+  | {
+      type: "assist.live";
+      chunkId: string;
+      chunkText: string;
+      payload: LiveChunkAssist;
     }
   | {
       type: "learning.output";

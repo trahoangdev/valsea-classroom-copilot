@@ -27,7 +27,7 @@ export function UploadFallback({
   const [uploadLanguage, setUploadLanguage] = useState<TranscribeUploadLanguage>("vietnamese");
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2 sm:justify-end">
       <input
         ref={inputRef}
         type="file"
@@ -52,20 +52,20 @@ export function UploadFallback({
           }
         }}
       />
-      <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-1.5">
         <Label htmlFor="upload-asr-lang" className="sr-only">
-          Transcription language
+          Upload transcript language
         </Label>
         <select
           id="upload-asr-lang"
-          className="h-9 rounded-md border border-input bg-background px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-9 min-w-[7.5rem] rounded-md border border-input bg-background px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
           value={uploadLanguage}
           disabled={disabled || uploading}
           onChange={(e) => setUploadLanguage(e.target.value as TranscribeUploadLanguage)}
-          aria-label="Transcription language for uploaded audio"
+          aria-label="Language hint for batch transcription"
         >
-          <option value="vietnamese">ASR: Vietnamese</option>
-          <option value="english">ASR: English</option>
+          <option value="vietnamese">Vietnamese</option>
+          <option value="english">English</option>
         </select>
       </div>
       <Button
@@ -73,7 +73,7 @@ export function UploadFallback({
         variant="outline"
         disabled={disabled || uploading}
         onClick={() => inputRef.current?.click()}
-        className="gap-2 border-dashed"
+        className="gap-2"
       >
         <Upload className="size-4" aria-hidden />
         {uploading ? "Uploading…" : "Upload audio file"}

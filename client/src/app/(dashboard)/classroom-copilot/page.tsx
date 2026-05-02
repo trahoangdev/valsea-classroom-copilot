@@ -6,6 +6,7 @@ import { BookOpen, ExternalLink, Eye, PlusCircle } from "lucide-react";
 import { AudioControls } from "@/components/classroom-copilot/audio-controls";
 import { ConfusionDialog } from "@/components/classroom-copilot/confusion-dialog";
 import { ClassroomErrorAlert } from "@/components/classroom-copilot/classroom-error-alert";
+import { LiveAssistFeed } from "@/components/classroom-copilot/live-assist-feed";
 import { LiveTranscript } from "@/components/classroom-copilot/live-transcript";
 import { LearningPanel } from "@/components/classroom-copilot/learning-panel";
 import { SessionStatusBadge } from "@/components/classroom-copilot/session-status-badge";
@@ -17,7 +18,12 @@ import { Label } from "@/components/ui/label";
 import { startAudioCapture } from "@/lib/classroom/audio/capture";
 import { postConfusion, postDemoTranscript } from "@/lib/classroom/api";
 import { DEMO_SCRIPT_VI } from "@/lib/classroom/demoScript";
-import type { BackendToFrontend, LearningOutput, SessionUiStatus } from "@/lib/classroom/types";
+import type {
+  BackendToFrontend,
+  LearningOutput,
+  LiveChunkAssist,
+  SessionUiStatus,
+} from "@/lib/classroom/types";
 import { connectGateway, sendJson } from "@/lib/classroom/websocket";
 
 const HTTP_BASE =
@@ -34,9 +40,15 @@ export default function ClassroomCopilotPage() {
   const [demoLoading, setDemoLoading] = useState(false);
   const [confusionOpen, setConfusionOpen] = useState(false);
   const [autoNotesEnabled, setAutoNotesEnabled] = useState(false);
+  const [liveAssistOn, setLiveAssistOn] = useState(false);
+  const [liveAssistEntries, setLiveAssistEntries] = useState<
+    { chunkId: string; chunkText: string; payload: LiveChunkAssist }[]
+  >([]);
   const [micActive, setMicActive] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
+  const liveAssistOnRef = useRef(false);
+  const transcriptPanelRef = useRef<HTMLDivElement | null>(null);
   const statusRef = useRef<SessionUiStatus>("idle");
   const captureRef = useRef<{ stop: () => void } | null>(null);
   const micStartedRef = useRef(false);
@@ -48,6 +60,19 @@ export default function ClassroomCopilotPage() {
   useEffect(() => {
     statusRef.current = status;
   }, [status]);
+
+  useEffect(() => {
+    liveAssistOnRef.current = liveAssistOn;
+  }, [liveAssistOn]);
+
+  const focusLiveTranscriptPanel = useCallback(() => {
+    requestAnimationFrame(() => {
+      const el = transcriptPanelRef.current;
+      if (!el) return;
+      el.scrollIntoView({ block: "start", behavior: "smooth" });
+      el.focus({ preventScroll: true });
+    });
+  }, []);
 
   const hasTranscript = finals.length > 0 || partial.trim().length > 0;
 
@@ -97,6 +122,18 @@ export default function ClassroomCopilotPage() {
         setLearning(msg.output);
         return;
       }
+      if (msg.type === "assist.live") {
+        setLiveAssistEntries((prev) => {
+          const entry = {
+            chunkId: msg.chunkId,
+            chunkText: msg.chunkText,
+            payload: msg.payload,
+          };
+          const rest = prev.filter((e) => e.chunkId !== msg.chunkId);
+          return [entry, ...rest].slice(0, 18);
+        });
+        return;
+      }
       if (msg.type === "error") {
         setErrorMsg(msg.message);
         return;
@@ -126,7 +163,8 @@ export default function ClassroomCopilotPage() {
     micStartedRef.current = true;
     setMicActive(true);
     setStatus("listening");
-  }, [sessionId]);
+    focusLiveTranscriptPanel();
+  }, [sessionId, focusLiveTranscriptPanel]);
 
   const stopMic = useCallback(() => {
     captureRef.current?.stop();
@@ -135,9 +173,19 @@ export default function ClassroomCopilotPage() {
     setMicActive(false);
   }, []);
 
+  const onLiveAssistToggle = useCallback(
+    (on: boolean) => {
+      setLiveAssistOn(on);
+      liveAssistOnRef.current = on;
+      sendJson(wsRef.current, { type: "liveAssist.set", sessionId, enabled: on });
+    },
+    [sessionId]
+  );
+
   const onStart = useCallback(() => {
     setErrorMsg(null);
     setLearning(null);
+    setLiveAssistEntries([]);
     captureCancelledRef.current = false;
     micStartedRef.current = false;
     setMicActive(false);
@@ -172,8 +220,14 @@ export default function ClassroomCopilotPage() {
       },
       onMessage: (msg) => {
         if (msg.type === "session.status" && msg.status === "listening") {
+          sendJson(ws, {
+            type: "liveAssist.set",
+            sessionId,
+            enabled: liveAssistOnRef.current,
+          });
           if (micStartedRef.current) {
             setStatus("listening");
+            focusLiveTranscriptPanel();
             return;
           }
           setStatus("requesting_microphone");
@@ -185,7 +239,7 @@ export default function ClassroomCopilotPage() {
     });
     wsRef.current = ws;
     setStatus("connecting");
-  }, [handleServerMessage, sessionId, startMic, stopMic]);
+  }, [focusLiveTranscriptPanel, handleServerMessage, sessionId, startMic, stopMic]);
 
   const onStop = useCallback(() => {
     captureCancelledRef.current = true;
@@ -218,6 +272,7 @@ export default function ClassroomCopilotPage() {
     setStatus("idle");
     lastAutoTranscriptSigRef.current = "";
     setConfusionOpen(false);
+    setLiveAssistEntries([]);
   }, [sessionId, stopMic]);
 
   const onGenerate = useCallback(async () => {
@@ -370,62 +425,101 @@ export default function ClassroomCopilotPage() {
         </div>
       ) : null}
 
-      <div className="@container/main px-4 lg:px-6">
-        <div className="grid gap-6 lg:grid-cols-2">
-          <LiveTranscript partial={partial} finals={finals} />
-          <LearningPanel
-            output={learning}
-            transcriptText={transcriptText}
-            sessionId={sessionId}
-            generating={status === "generating_outputs"}
-          />
+      <div className="@container/main isolate px-4 lg:px-6">
+        <div className="grid items-start gap-6 lg:grid-cols-2">
+          <div className="flex min-h-0 min-w-0 flex-col gap-4">
+            <div className="min-h-0 min-w-0 flex-1">
+              <LiveTranscript ref={transcriptPanelRef} partial={partial} finals={finals} />
+            </div>
+            <div className="relative z-0 min-w-0 shrink-0 pb-1">
+              <LiveAssistFeed entries={liveAssistEntries} enabled={liveAssistOn} />
+            </div>
+          </div>
+          <div className="min-w-0">
+            <LearningPanel
+              output={learning}
+              transcriptText={transcriptText}
+              sessionId={sessionId}
+              generating={status === "generating_outputs"}
+            />
+          </div>
         </div>
       </div>
 
-      <div className="px-4 pb-6 lg:px-6">
-        <Card>
-          <CardContent className="flex flex-col gap-4 pt-6 md:flex-row md:flex-wrap md:items-center md:justify-between">
-            <div className="flex flex-col gap-4 md:flex-1">
-              <AudioControls
-                status={status}
-                hasTranscript={hasTranscript}
-                micHot={micActive}
-                onStart={onStart}
-                onStop={onStop}
-                onGenerate={onGenerate}
-                onConfused={() => setConfusionOpen(true)}
-              />
-              <div className="flex flex-wrap items-center gap-3 rounded-md border border-dashed bg-muted/20 px-3 py-2">
-                <Checkbox
-                  id="auto-notes"
-                  checked={autoNotesEnabled}
-                  onCheckedChange={(v) => setAutoNotesEnabled(v === true)}
-                />
-                <Label htmlFor="auto-notes" className="cursor-pointer font-normal text-muted-foreground">
-                  Auto-generate notes every 60s while listening
-                </Label>
+      <div className="relative z-20 mt-10 border-t border-border bg-background px-4 pb-8 pt-6 lg:px-6">
+        <Card className="bg-card shadow-md">
+          <CardContent className="flex flex-col gap-5 pt-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
+              <div className="min-w-0 flex-1 space-y-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Live session
+                </p>
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                  <AudioControls
+                    status={status}
+                    hasTranscript={hasTranscript}
+                    micHot={micActive}
+                    onStart={onStart}
+                    onStop={onStop}
+                    onGenerate={onGenerate}
+                    onConfused={() => setConfusionOpen(true)}
+                  />
+                  <div className="flex flex-col gap-2 sm:border-l sm:border-border sm:pl-3">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="auto-notes"
+                        checked={autoNotesEnabled}
+                        onCheckedChange={(v) => setAutoNotesEnabled(v === true)}
+                      />
+                      <Label
+                        htmlFor="auto-notes"
+                        className="cursor-pointer text-sm font-normal leading-snug text-muted-foreground"
+                      >
+                        Auto notes every 60s while listening
+                      </Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="live-assist"
+                        checked={liveAssistOn}
+                        onCheckedChange={(v) => onLiveAssistToggle(v === true)}
+                      />
+                      <Label
+                        htmlFor="live-assist"
+                        className="cursor-pointer text-sm font-normal leading-snug text-muted-foreground"
+                      >
+                        Live assist during lesson (per segment, ~12s min gap)
+                      </Label>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={
-                  demoLoading || status === "generating_outputs" || status === "connecting"
-                }
-                onClick={() => void onSeedDemoScript()}
-                className="gap-2"
-              >
-                <BookOpen className="size-4" aria-hidden />
-                {demoLoading ? "Syncing…" : "Insert demo script"}
-              </Button>
-              <UploadFallback
-                httpBase={HTTP_BASE}
-                sessionId={sessionId}
-                disabled={status === "generating_outputs" || demoLoading}
-                onTranscript={onUploadTranscript}
-                onError={(m) => setErrorMsg(m)}
-              />
+              <div className="flex min-w-0 flex-col gap-2 lg:items-end lg:border-l lg:border-border lg:pl-8">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground lg:text-right">
+                  Demo and batch
+                </p>
+                <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={
+                      demoLoading || status === "generating_outputs" || status === "connecting"
+                    }
+                    onClick={() => void onSeedDemoScript()}
+                    className="gap-2"
+                  >
+                    <BookOpen className="size-4" aria-hidden />
+                    {demoLoading ? "Syncing…" : "Insert demo script"}
+                  </Button>
+                  <UploadFallback
+                    httpBase={HTTP_BASE}
+                    sessionId={sessionId}
+                    disabled={status === "generating_outputs" || demoLoading}
+                    onTranscript={onUploadTranscript}
+                    onError={(m) => setErrorMsg(m)}
+                  />
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

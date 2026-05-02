@@ -8,6 +8,12 @@ export type SessionUiStatus =
   | "error"
   | "stopped";
 
+export type LiveChunkAssist = {
+  microSummaryVi: string;
+  explainVi: string;
+  lineEn: string;
+};
+
 export type BackendToFrontend =
   | { type: "session.status"; status: SessionUiStatus }
   | { type: "transcript.partial"; text: string }
@@ -21,10 +27,25 @@ export type BackendToFrontend =
       };
     }
   | {
+      type: "assist.live";
+      chunkId: string;
+      chunkText: string;
+      payload: LiveChunkAssist;
+    }
+  | {
       type: "learning.output";
       output: LearningOutput;
     }
   | { type: "error"; message: string; recoverable: boolean };
+
+/** Messages accepted by the gateway (subset; see AGENTS.md §11). */
+export type FrontendToGateway =
+  | { type: "session.start"; sessionId: string }
+  | { type: "audio.chunk"; sessionId: string; audio: string }
+  | { type: "session.stop"; sessionId: string }
+  | { type: "learning.generate"; sessionId: string }
+  | { type: "confusion.mark"; sessionId: string; note: string }
+  | { type: "liveAssist.set"; sessionId: string; enabled: boolean };
 
 export type KeyTerm = {
   term: string;
