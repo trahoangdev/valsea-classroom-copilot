@@ -42,6 +42,8 @@ export type LearningOutput = {
   shortSummaryVi: string;
   keyTerms: KeyTerm[];
   simpleExplanationVi: string;
+  /** English recap — same lecture facts, for bilingual review. */
+  englishRecapEn: string;
   quizQuestions: QuizQuestion[];
   possibleConfusingPoints: string[];
 };

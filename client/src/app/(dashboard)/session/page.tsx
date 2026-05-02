@@ -31,7 +31,7 @@ const HTTP_BASE =
 function formatTs(ms: number): string {
   if (!ms) return "—";
   try {
-    return new Date(ms).toLocaleString("vi-VN", {
+    return new Date(ms).toLocaleString("en-US", {
       dateStyle: "short",
       timeStyle: "short",
     });
@@ -94,25 +94,25 @@ export default function SessionsManagerPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Giảng viên · gateway
+            Instructor · gateway
           </p>
           <h1 className="mt-1 flex flex-wrap items-center gap-3 text-2xl font-bold tracking-tight">
             <ClipboardList className="size-7 shrink-0" aria-hidden />
-            Quản lý phiên học
+            Session management
           </h1>
           <p className="mt-2 max-w-2xl text-muted-foreground">
-            Danh sách phiên đã tạo qua Classroom Copilot (bộ nhớ gateway và Supabase nếu bật). Mở chi
-            tiết để xem transcript, ghi chú LLM và tín hiệu bối rối.
+            Sessions created from Classroom Copilot (gateway memory and Supabase if enabled). Open a row for
+            transcript, LLM notes, and confusion signals.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {persistence ? (
               <Badge variant="secondary" className="font-normal">
-                Lưu trữ: {persistence === "supabase" ? "Supabase + RAM" : "Chỉ RAM (gateway)"}
+                Storage: {persistence === "supabase" ? "Supabase + RAM" : "RAM only (gateway)"}
               </Badge>
             ) : null}
             <Button type="button" variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
               <RefreshCw className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`} aria-hidden />
-              Làm mới
+              Refresh
             </Button>
             <Button variant="outline" size="sm" asChild>
               <a href={`${HTTP_BASE}/api/sessions`} target="_blank" rel="noopener noreferrer">
@@ -135,7 +135,7 @@ export default function SessionsManagerPage() {
           <CardContent className="flex gap-3 pt-6">
             <AlertCircle className="size-5 shrink-0 text-destructive" aria-hidden />
             <div>
-              <p className="font-medium text-destructive">Không tải được danh sách</p>
+              <p className="font-medium text-destructive">Could not load list</p>
               <p className="mt-1 text-sm text-muted-foreground">{error}</p>
             </div>
           </CardContent>
@@ -144,13 +144,13 @@ export default function SessionsManagerPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Tất cả phiên</CardTitle>
+          <CardTitle className="text-lg">All sessions</CardTitle>
           <CardDescription>
             {loading
-              ? "Đang tải…"
+              ? "Loading…"
               : rows.length === 0
-                ? "Chưa có phiên — mở Copilot và bắt đầu nghe hoặc chèn kịch bản demo."
-                : `${rows.length} phiên (sắp xếp theo cập nhật gần nhất)`}
+                ? "No sessions yet — open Copilot and start listening or insert the demo script."
+                : `${rows.length} sessions (most recently updated first)`}
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0 sm:px-6 sm:pb-6">
@@ -158,13 +158,13 @@ export default function SessionsManagerPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[140px]">Phiên</TableHead>
-                  <TableHead>Trạng thái</TableHead>
-                  <TableHead>Tạo</TableHead>
-                  <TableHead>Cập nhật</TableHead>
+                  <TableHead className="min-w-[140px]">Session</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Updated</TableHead>
                   <TableHead className="min-w-[200px] max-w-[320px]">Transcript</TableHead>
-                  <TableHead className="text-center">Ghi chú</TableHead>
-                  <TableHead className="text-center">Bối rối</TableHead>
+                  <TableHead className="text-center">Notes</TableHead>
+                  <TableHead className="text-center">Confusion</TableHead>
                   <TableHead className="w-[100px]" />
                 </TableRow>
               </TableHeader>
@@ -197,17 +197,17 @@ export default function SessionsManagerPage() {
                     <TableCell className="max-w-[320px] whitespace-normal align-top text-muted-foreground">
                       {r.hasTranscript ? (
                         <span className="line-clamp-2 text-sm" title={r.transcriptPreview}>
-                          {r.transcriptPreview || "_(có nội dung)_"}
+                          {r.transcriptPreview || "_(has content)_"}
                         </span>
                       ) : (
-                        <span className="text-sm italic">Trống</span>
+                        <span className="text-sm italic">Empty</span>
                       )}
                     </TableCell>
                     <TableCell className="text-center tabular-nums">{r.learningCount}</TableCell>
                     <TableCell className="text-center tabular-nums">{r.confusionCount}</TableCell>
                     <TableCell>
                       <Button variant="outline" size="sm" asChild>
-                        <Link href={`/session/${encodeURIComponent(r.sessionId)}`}>Chi tiết</Link>
+                        <Link href={`/session/${encodeURIComponent(r.sessionId)}`}>Details</Link>
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -218,7 +218,7 @@ export default function SessionsManagerPage() {
 
           {!loading && rows.length === 0 && !error ? (
             <div className="px-6 py-12 text-center text-sm text-muted-foreground">
-              Bắt đầu từ{" "}
+              Start from{" "}
               <Link href="/classroom-copilot" className="font-medium text-primary underline-offset-4 hover:underline">
                 Classroom Copilot
               </Link>
@@ -230,8 +230,8 @@ export default function SessionsManagerPage() {
 
       <Card className="max-w-lg">
         <CardHeader>
-          <CardTitle className="text-lg">Mở phiên theo ID</CardTitle>
-          <CardDescription>Dán UUID đầy đủ nếu bạn đã copy từ Copilot hoặc từ bảng trên.</CardDescription>
+          <CardTitle className="text-lg">Open session by ID</CardTitle>
+          <CardDescription>Paste the full UUID if you copied it from Copilot or from the table above.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 sm:flex-row">
           <Input
@@ -242,7 +242,7 @@ export default function SessionsManagerPage() {
             className="font-mono text-sm"
           />
           <Button type="button" onClick={openById} disabled={!pasteId.trim()}>
-            Mở
+            Open
           </Button>
         </CardContent>
       </Card>

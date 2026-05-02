@@ -50,7 +50,7 @@ NEXT_PUBLIC_WS_URL=ws://localhost:3001/ws
 
 **Confusion:** **Tôi đang bối rối** sends `confusion.mark` over the WebSocket when connected, or `POST /api/confusion` when the socket is closed; events are stored on the gateway and, when Supabase is configured, in `confusion_events`.
 
-**Teacher / review:** Sidebar **Quản lý phiên** (`/session`) lists sessions via **`GET /api/sessions`** (memory + Supabase merge). Open a row or paste a UUID; detail view uses **`GET /api/session/:sessionId`**. With **`SUPABASE_URL`** + **`SUPABASE_SERVICE_ROLE_KEY`** set, run `server/supabase/migrations/001_classroom_copilot.sql` in the Supabase SQL editor; then sessions survive gateway restarts. Check **`GET /health`** for `persistence: "supabase"` and `supabase: "reachable"`.
+**Teacher / review:** Sidebar **Quản lý phiên** (`/session`) lists sessions via **`GET /api/sessions`** (memory + Supabase merge). Open a row or paste a UUID; detail view uses **`GET /api/session/:sessionId`**. With **`SUPABASE_URL`** + **`SUPABASE_SERVICE_ROLE_KEY`** set, run `server/supabase/migrations/001_classroom_copilot.sql` and `002_learning_outputs_english_recap.sql` in the Supabase SQL editor; then sessions survive gateway restarts (including English recap on notes). Check **`GET /health`** for `persistence: "supabase"` and `supabase: "reachable"`.
 
 ## Workspace layout
 

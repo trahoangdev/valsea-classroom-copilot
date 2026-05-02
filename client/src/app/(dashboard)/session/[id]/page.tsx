@@ -17,7 +17,7 @@ const HTTP_BASE =
 function formatTime(ms: number): string {
   if (!ms) return "—";
   try {
-    return new Date(ms).toLocaleString("vi-VN");
+    return new Date(ms).toLocaleString("en-US");
   } catch {
     return String(ms);
   }
@@ -27,23 +27,29 @@ function LearningOutputCard({ output, index }: { output: LearningOutput; index: 
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Ghi chú #{index + 1}</CardTitle>
-        <CardDescription>Tóm tắt & thuật ngữ</CardDescription>
+        <CardTitle className="text-base">Notes #{index + 1}</CardTitle>
+        <CardDescription>Summary & key terms</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         <div>
-          <p className="font-medium text-muted-foreground">Tóm tắt</p>
+          <p className="font-medium text-muted-foreground">Summary (VI)</p>
           <p className="mt-1 leading-relaxed text-foreground">{output.shortSummaryVi || "—"}</p>
         </div>
+        {output.englishRecapEn?.trim() ? (
+          <div>
+            <p className="font-medium text-muted-foreground">Lecture recap (EN)</p>
+            <p className="mt-1 leading-relaxed text-foreground">{output.englishRecapEn}</p>
+          </div>
+        ) : null}
         {output.simpleExplanationVi?.trim() ? (
           <div>
-            <p className="font-medium text-muted-foreground">Giải thích đơn giản</p>
+            <p className="font-medium text-muted-foreground">Simple explanation</p>
             <p className="mt-1 leading-relaxed text-foreground">{output.simpleExplanationVi}</p>
           </div>
         ) : null}
         {output.keyTerms?.length ? (
           <div>
-            <p className="font-medium text-muted-foreground">Thuật ngữ ({output.keyTerms.length})</p>
+            <p className="font-medium text-muted-foreground">Key terms ({output.keyTerms.length})</p>
             <ul className="mt-1 list-inside list-disc text-muted-foreground">
               {output.keyTerms.map((t) => (
                 <li key={t.term}>
@@ -67,7 +73,7 @@ function LearningOutputCard({ output, index }: { output: LearningOutput; index: 
                     ))}
                   </ul>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Đáp án: <span className="font-medium text-foreground">{q.answer}</span>
+                    Answer: <span className="font-medium text-foreground">{q.answer}</span>
                   </p>
                 </li>
               ))}
@@ -76,7 +82,7 @@ function LearningOutputCard({ output, index }: { output: LearningOutput; index: 
         ) : null}
         {output.possibleConfusingPoints?.length ? (
           <div>
-            <p className="font-medium text-amber-700 dark:text-amber-400">Có thể gây nhầm lẫn</p>
+            <p className="font-medium text-amber-700 dark:text-amber-400">Possibly confusing</p>
             <ul className="mt-1 list-inside list-disc">
               {output.possibleConfusingPoints.map((p, i) => (
                 <li key={i}>{p}</li>
@@ -120,15 +126,15 @@ export default function SessionDetailPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Giảng viên · quản lý phiên
+            Instructor · session management
           </p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight">Chi tiết phiên</h1>
-          <p className="mt-1 break-all font-mono text-sm text-muted-foreground">{sessionId || "(thiếu id)"}</p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight">Session details</h1>
+          <p className="mt-1 break-all font-mono text-sm text-muted-foreground">{sessionId || "(missing id)"}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
             <RefreshCw className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`} aria-hidden />
-            Làm mới
+            Refresh
           </Button>
           <Button variant="outline" size="sm" asChild>
             <a
@@ -141,7 +147,7 @@ export default function SessionDetailPage() {
             </a>
           </Button>
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/session">Phiên khác</Link>
+            <Link href="/session">Other sessions</Link>
           </Button>
           <Button variant="ghost" size="sm" asChild>
             <Link href="/classroom-copilot">Copilot</Link>
@@ -152,7 +158,7 @@ export default function SessionDetailPage() {
       {loading ? (
         <Card>
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
-            Đang tải dữ liệu từ gateway…
+            Loading data from gateway…
           </CardContent>
         </Card>
       ) : null}
@@ -162,11 +168,11 @@ export default function SessionDetailPage() {
           <CardContent className="flex gap-3 pt-6">
             <AlertCircle className="size-5 shrink-0 text-destructive" aria-hidden />
             <div>
-              <p className="font-medium text-destructive">Không lấy được phiên</p>
+              <p className="font-medium text-destructive">Could not load session</p>
               <p className="mt-1 text-sm text-muted-foreground">{error}</p>
               <p className="mt-2 text-xs text-muted-foreground">
-                Kiểm tra gateway đang chạy, <span className="font-mono">NEXT_PUBLIC_GATEWAY_URL</span>, và đã có
-                hoạt động / lưu Supabase cho session này.
+                Check that the gateway is running, <span className="font-mono">NEXT_PUBLIC_GATEWAY_URL</span> is
+                correct, and this session has activity or Supabase persistence.
               </p>
             </div>
           </CardContent>
@@ -180,15 +186,15 @@ export default function SessionDetailPage() {
               <div>
                 <CardTitle>Transcript (gateway)</CardTitle>
                 <CardDescription>
-                  Cập nhật lần cuối: {formatTime(data.updatedAt)}
+                  Last updated: {formatTime(data.updatedAt)}
                 </CardDescription>
               </div>
-              <Badge variant="secondary">{data.transcript?.trim() ? "Có nội dung" : "Trống"}</Badge>
+              <Badge variant="secondary">{data.transcript?.trim() ? "Has content" : "Empty"}</Badge>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[min(40vh,360px)] rounded-md border p-4">
                 <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-relaxed text-foreground">
-                  {data.transcript?.trim() || "_(Chưa có transcript)_"}
+                  {data.transcript?.trim() || "_(No transcript yet)_"}
                 </pre>
               </ScrollArea>
             </CardContent>
@@ -196,12 +202,12 @@ export default function SessionDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Tín hiệu bối rối</CardTitle>
-              <CardDescription>{data.confusionEvents.length} sự kiện</CardDescription>
+              <CardTitle className="text-lg">Confusion signals</CardTitle>
+              <CardDescription>{data.confusionEvents.length} events</CardDescription>
             </CardHeader>
             <CardContent>
               {data.confusionEvents.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Chưa có.</p>
+                <p className="text-sm text-muted-foreground">None yet.</p>
               ) : (
                 <ul className="space-y-2 text-sm">
                   {data.confusionEvents.map((ev, i) => (
@@ -217,12 +223,14 @@ export default function SessionDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Ghi chú học tập</CardTitle>
-              <CardDescription>{data.learningOutputs.length} lần tạo</CardDescription>
+              <CardTitle className="text-lg">Learning notes</CardTitle>
+              <CardDescription>{data.learningOutputs.length} generations</CardDescription>
             </CardHeader>
             <CardContent>
               {data.learningOutputs.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Chưa có — sinh viên có thể bấm Tạo ghi chú trên Copilot.</p>
+                <p className="text-sm text-muted-foreground">
+                  None yet — students can click Generate notes on Copilot.
+                </p>
               ) : (
                 <div className="space-y-4">
                   {data.learningOutputs.map((out, i) => (

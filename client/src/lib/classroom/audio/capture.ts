@@ -22,7 +22,7 @@ export async function startAudioCapture(
       video: false,
     });
   } catch {
-    onError("Không lấy được quyền microphone.");
+    onError("Could not get microphone permission.");
     return { stop: () => {} };
   }
 

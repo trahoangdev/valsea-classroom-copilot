@@ -22,9 +22,9 @@ export function LiveTranscript({ partial, finals }: Props) {
   return (
     <Card className="flex h-full min-h-[420px] flex-col gap-0 py-0">
       <CardHeader className="border-b px-6 py-4">
-        <CardTitle className="text-lg">Transcript trực tiếp</CardTitle>
+        <CardTitle className="text-lg">Live transcript</CardTitle>
         <CardDescription>
-          Luồng từ VALSEA Realtime ASR qua gateway (PCM16 16kHz)
+          Stream from VALSEA Realtime ASR via gateway (PCM16 16kHz)
         </CardDescription>
       </CardHeader>
       <CardContent className="flex min-h-0 flex-1 flex-col p-0">
@@ -35,11 +35,11 @@ export function LiveTranscript({ partial, finals }: Props) {
                 <Mic className="size-7 text-muted-foreground" aria-hidden />
               </div>
               <div className="max-w-sm space-y-2">
-                <p className="font-semibold text-foreground">Chưa có âm thanh</p>
+                <p className="font-semibold text-foreground">No audio yet</p>
                 <p className="text-sm text-muted-foreground">
-                  Nhấn <span className="font-medium text-foreground">Bắt đầu nghe</span> để thu âm (VALSEA
-                  realtime), tải audio, hoặc <span className="font-medium text-foreground">Chèn kịch bản demo</span>{" "}
-                  (AGENTS.md §17) để thử <span className="font-medium text-foreground">Tạo ghi chú</span> không cần mic.
+                  Click <span className="font-medium text-foreground">Start listening</span> to capture (VALSEA
+                  realtime), upload audio, or <span className="font-medium text-foreground">Insert demo script</span>{" "}
+                  (AGENTS.md §17) to try <span className="font-medium text-foreground">Generate notes</span> without a mic.
                 </p>
               </div>
             </div>

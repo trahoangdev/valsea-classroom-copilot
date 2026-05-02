@@ -72,6 +72,9 @@ function parseClientMessage(raw: string): FrontendToBackend | null {
   }
 }
 
+const VALSEA_MAX_RECONNECTS = 5;
+const VALSEA_RECONNECT_BASE_MS = 2000;
+
 type SessionRuntime = {
   sessionId: string;
   valseaWs: WebSocket | null;
@@ -79,10 +82,20 @@ type SessionRuntime = {
   valseaReady: boolean;
   lastPartial: string;
   tickTimer: NodeJS.Timeout | null;
+  valseaReconnectCancelled: boolean;
+  /** Incremented on each abnormal VALSEA close; reset on `session_ready`. */
+  valseaReconnectCount: number;
+  valseaConnGeneration: number;
+  valseaReconnectTimer: NodeJS.Timeout | null;
 };
 
 function closeValsea(rt: SessionRuntime | null): void {
   if (!rt) return;
+  rt.valseaReconnectCancelled = true;
+  if (rt.valseaReconnectTimer) {
+    clearTimeout(rt.valseaReconnectTimer);
+    rt.valseaReconnectTimer = null;
+  }
   if (rt.tickTimer) {
     clearInterval(rt.tickTimer);
     rt.tickTimer = null;
@@ -98,6 +111,7 @@ function closeValsea(rt: SessionRuntime | null): void {
   rt.valseaReady = false;
 }
 
+/** Text still in the processor buffer + live partial (not yet flushed to store). */
 function buildTranscriptForLearning(rt: SessionRuntime): string {
   const base = rt.processor.getFullTranscript();
   const tail = rt.lastPartial.trim();
@@ -105,6 +119,28 @@ function buildTranscriptForLearning(rt: SessionRuntime): string {
     return [base, tail].filter(Boolean).join("\n");
   }
   return base;
+}
+
+function mergeStoredAndLive(stored: string, live: string): string {
+  const a = stored.trim();
+  const b = live.trim();
+  if (!a) return b;
+  if (!b) return a;
+  if (a.includes(b)) return a;
+  if (b.includes(a)) return b;
+  return `${a}\n\n${b}`;
+}
+
+/** Full lecture text: persisted chunks in store + any unflushed processor state (fixes empty WS generate after finals). */
+async function resolveTranscriptForLearning(
+  sessionId: string,
+  rt: SessionRuntime | null
+): Promise<string> {
+  const row = await store.get(sessionId);
+  const persisted = row?.transcript?.trim() ?? "";
+  const live =
+    rt && rt.sessionId === sessionId ? buildTranscriptForLearning(rt).trim() : "";
+  return mergeStoredAndLive(persisted, live);
 }
 
 async function main(): Promise<void> {
@@ -241,19 +277,21 @@ async function main(): Promise<void> {
       };
     }
 
-    const q = req.query as { sessionId?: string };
+    const q = req.query as { sessionId?: string; language?: string };
     const mp = await req.file();
     if (!mp) {
       reply.code(400);
       return { error: "Missing file field" };
     }
+    const langRaw = typeof q.language === "string" ? q.language.toLowerCase().trim() : "";
+    const batchLang = langRaw === "english" || langRaw === "en" ? "english" : "vietnamese";
     const chunks: Buffer[] = [];
     for await (const ch of mp.file) {
       chunks.push(ch);
     }
     const buffer = Buffer.concat(chunks);
     try {
-      const text = await transcribeAudioFile(buffer, mp.filename || "upload.wav");
+      const text = await transcribeAudioFile(buffer, mp.filename || "upload.wav", batchLang);
       if (typeof q.sessionId === "string" && q.sessionId.trim()) {
         store.replaceTranscriptFromBulk(q.sessionId.trim(), text);
       }
@@ -274,6 +312,7 @@ async function main(): Promise<void> {
       for (const ev of events) {
         if (ev.kind === "session_ready") {
           session.valseaReady = true;
+          session.valseaReconnectCount = 0;
           log("valsea_session_ready", { sessionId: session.sessionId });
           sendJson(socket, { type: "session.status", status: "listening" });
           continue;
@@ -338,64 +377,129 @@ async function main(): Promise<void> {
         valseaReady: false,
         lastPartial: "",
         tickTimer: null,
+        valseaReconnectCancelled: false,
+        valseaReconnectCount: 0,
+        valseaConnGeneration: 0,
+        valseaReconnectTimer: null,
       };
 
       sendJson(socket, { type: "session.status", status: "connecting" });
       log("session_started", { sessionId });
       store.ensureSessionStarted(sessionId);
 
-      try {
-        const vw = connectValseaRealtime(
-          env.valseaApiKey,
-          handleValseaEvents,
-          () => {
-            log("valsea_connected", { sessionId });
-          },
-          (code, reason) => {
-            log("valsea_closed", { sessionId, code, reason });
-            sendJson(socket, {
-              type: "error",
-              message: `VALSEA connection closed (${code})`,
-              recoverable: true,
-            });
-            sendJson(socket, { type: "session.status", status: "stopped" });
-          },
-          (err) => {
-            log("error", { where: "valsea_ws", message: err.message });
-            sendJson(socket, {
-              type: "error",
-              message: err.message,
-              recoverable: true,
-            });
-            sendJson(socket, { type: "session.status", status: "error" });
-          }
-        );
-        if (session) session.valseaWs = vw;
+      session.tickTimer = setInterval(() => {
+        if (!session?.valseaReady) return;
+        const flushed = session.processor.tick();
+        if (flushed) {
+          sendJson(socket, {
+            type: "transcript.final",
+            chunk: {
+              id: flushed.id,
+              startTime: flushed.startTime,
+              endTime: flushed.endTime,
+              text: flushed.text,
+            },
+          });
+          store.appendFinalChunk(session.sessionId, flushed);
+        }
+      }, 10_000);
 
-        session!.tickTimer = setInterval(() => {
-          if (!session?.valseaReady) return;
-          const flushed = session.processor.tick();
-          if (flushed) {
-            sendJson(socket, {
-              type: "transcript.final",
-              chunk: {
-                id: flushed.id,
-                startTime: flushed.startTime,
-                endTime: flushed.endTime,
-                text: flushed.text,
-              },
-            });
-            store.appendFinalChunk(session.sessionId, flushed);
+      const scheduleValReconnect = (detail: string): void => {
+        if (!session || session.valseaReconnectCancelled) return;
+        if (session.valseaReconnectCount >= VALSEA_MAX_RECONNECTS) {
+          sendJson(socket, {
+            type: "error",
+            message:
+              "VALSEA: đã thử kết nối lại quá nhiều lần. Dùng tải audio hoặc tạo ghi chú qua HTTP.",
+            recoverable: true,
+          });
+          sendJson(socket, { type: "session.status", status: "error" });
+          return;
+        }
+        session.valseaReconnectCount += 1;
+        const delay = Math.min(
+          VALSEA_RECONNECT_BASE_MS * Math.pow(2, session.valseaReconnectCount - 1),
+          30_000
+        );
+        sendJson(socket, { type: "session.status", status: "connecting" });
+        sendJson(socket, {
+          type: "error",
+          message: `${detail} — đang kết nối lại (${session.valseaReconnectCount}/${VALSEA_MAX_RECONNECTS}) sau ~${Math.round(delay / 1000)}s…`,
+          recoverable: true,
+        });
+        session.valseaReconnectTimer = setTimeout(() => {
+          if (!session) return;
+          session.valseaReconnectTimer = null;
+          connectValseaOnce();
+        }, delay);
+      };
+
+      const connectValseaOnce = (): void => {
+        if (!session || session.valseaReconnectCancelled) return;
+        session.valseaConnGeneration += 1;
+        const gen = session.valseaConnGeneration;
+        session.valseaReady = false;
+
+        try {
+          const vw = connectValseaRealtime(
+            env.valseaApiKey,
+            handleValseaEvents,
+            () => {
+              if (!session || gen !== session.valseaConnGeneration) return;
+              log("valsea_connected", { sessionId: session.sessionId });
+            },
+            (code, reason) => {
+              log("valsea_closed", { sessionId, code, reason });
+              if (!session || gen !== session.valseaConnGeneration) return;
+              session.valseaWs = null;
+              session.valseaReady = false;
+              if (session.valseaReconnectCancelled) return;
+              scheduleValReconnect(`VALSEA đóng (${code}${reason ? `: ${reason}` : ""})`);
+            },
+            (err) => {
+              log("error", { where: "valsea_ws", message: err.message });
+              if (!session || gen !== session.valseaConnGeneration) return;
+              sendJson(socket, {
+                type: "error",
+                message: err.message,
+                recoverable: true,
+              });
+            }
+          );
+          if (session && gen === session.valseaConnGeneration) {
+            session.valseaWs = vw;
+          } else {
+            try {
+              vw.close();
+            } catch {
+              /* ignore */
+            }
           }
-        }, 10_000);
+        } catch (e) {
+          const s = session;
+          if (s) closeValsea(s);
+          session = null;
+          sendJson(socket, {
+            type: "error",
+            message: e instanceof Error ? e.message : "VALSEA realtime connection failed",
+            recoverable: true,
+          });
+          sendJson(socket, { type: "session.status", status: "error" });
+        }
+      };
+
+      try {
+        connectValseaOnce();
       } catch (e) {
+        const s = session;
+        if (s) closeValsea(s);
+        session = null;
         sendJson(socket, {
           type: "error",
           message: e instanceof Error ? e.message : "VALSEA realtime connection failed",
           recoverable: true,
         });
         sendJson(socket, { type: "session.status", status: "error" });
-        session = null;
       }
     };
 
@@ -453,7 +557,10 @@ async function main(): Promise<void> {
               },
             });
           }
-          store.finalizeSession(session.sessionId, buildTranscriptForLearning(session));
+          store.finalizeSession(
+            session.sessionId,
+            await resolveTranscriptForLearning(session.sessionId, session)
+          );
           closeValsea(session);
           sendJson(socket, { type: "session.status", status: "stopped" });
           log("session_stopped", { sessionId: msg.sessionId });
@@ -473,12 +580,10 @@ async function main(): Promise<void> {
           sendJson(socket, { type: "session.status", status: "generating_outputs" });
           log("learning_generation_started", { sessionId: msg.sessionId });
           try {
-            let transcript = "";
-            if (session && session.sessionId === msg.sessionId) {
-              transcript = buildTranscriptForLearning(session);
-            } else {
-              transcript = (await store.get(msg.sessionId))?.transcript ?? "";
-            }
+            const transcript = await resolveTranscriptForLearning(
+              msg.sessionId,
+              session && session.sessionId === msg.sessionId ? session : null
+            );
             if (!transcript.trim()) {
               sendJson(socket, {
                 type: "error",

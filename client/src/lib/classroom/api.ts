@@ -81,14 +81,17 @@ export async function postDemoTranscript(
   return { ok: data.ok ?? true };
 }
 
+export type TranscribeUploadLanguage = "vietnamese" | "english";
+
 export async function transcribeUpload(
   httpBase: string,
   file: File,
-  sessionId: string
+  sessionId: string,
+  language: TranscribeUploadLanguage = "vietnamese"
 ): Promise<{ text?: string; error?: string }> {
   const form = new FormData();
   form.set("file", file);
-  const url = `${httpBase.replace(/\/$/, "")}/api/transcribe?sessionId=${encodeURIComponent(sessionId)}`;
+  const url = `${httpBase.replace(/\/$/, "")}/api/transcribe?sessionId=${encodeURIComponent(sessionId)}&language=${encodeURIComponent(language)}`;
   const res = await fetch(url, { method: "POST", body: form });
   const data = (await res.json()) as { text?: string; error?: string };
   if (!res.ok) {

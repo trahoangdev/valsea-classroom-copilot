@@ -49,6 +49,8 @@ export type LearningOutput = {
   shortSummaryVi: string;
   keyTerms: KeyTerm[];
   simpleExplanationVi: string;
+  /** English recap of the same lecture content (for international students / review). */
+  englishRecapEn: string;
   quizQuestions: QuizQuestion[];
   possibleConfusingPoints: string[];
 };

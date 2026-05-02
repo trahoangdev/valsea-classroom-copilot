@@ -65,7 +65,7 @@ const data = {
           icon: GraduationCap,
         },
         {
-          title: "Quản lý phiên",
+          title: "Session management",
           url: "/session",
           icon: ClipboardList,
         },

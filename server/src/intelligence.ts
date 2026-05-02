@@ -9,16 +9,20 @@ Return valid JSON with exactly these keys:
 - shortSummaryVi (string)
 - keyTerms (array of { "term", "definitionVi", "whyItMatters" })
 - simpleExplanationVi (string)
+- englishRecapEn (string)
 - quizQuestions (array of { "question", "choices" (4 strings), "answer" })
 - possibleConfusingPoints (string array)
 
 Rules:
 - Write explanations in simple Vietnamese.
-- Preserve English technical terms.
+- englishRecapEn: clear, concise English summary of the same facts as the lecture — for international students or bilingual review. Use natural English; keep technical terms in standard English. Same fidelity as shortSummaryVi: do not invent content.
+- If there is little Vietnamese prose (mostly English terms), englishRecapEn may closely mirror the technical content in polished English.
+- Preserve English technical terms in Vietnamese fields where appropriate.
 - Do not invent content outside the transcript.
 - Keep summaries concise.
-- If the transcript is too short, use empty arrays where appropriate and put a short note in shortSummaryVi.
+- If the transcript is too short, use empty arrays where appropriate, empty englishRecapEn, and put a short note in shortSummaryVi.
 - Make quiz questions answerable from the transcript.
+- quizQuestions: Always write "question", all four "choices", and "answer" in Vietnamese (simple, classroom-friendly). Even if the transcript is entirely in English, translate the quiz into Vietnamese. Keep English technical terms from the lecture inside Vietnamese sentences when needed (e.g. "Hàm gọi chính nó — recursion — để làm gì?"). Do not leave the quiz in English only.
 - Avoid over-explaining.
 - Respond with JSON only, no markdown fences.`;
 
@@ -27,6 +31,7 @@ function emptyOutput(note: string): LearningOutput {
     shortSummaryVi: note,
     keyTerms: [],
     simpleExplanationVi: "",
+    englishRecapEn: "",
     quizQuestions: [],
     possibleConfusingPoints: [],
   };
@@ -49,6 +54,10 @@ function coerceOutput(raw: Record<string, unknown>): LearningOutput {
     typeof raw.shortSummaryVi === "string" ? raw.shortSummaryVi : "";
   const simpleExplanationVi =
     typeof raw.simpleExplanationVi === "string" ? raw.simpleExplanationVi : "";
+  const englishRecapEnRaw =
+    raw.englishRecapEn ?? raw.english_recap_en ?? raw.lectureSummaryEn;
+  const englishRecapEn =
+    typeof englishRecapEnRaw === "string" ? englishRecapEnRaw : "";
 
   const keyTermsRaw = raw.keyTerms;
   const keyTerms: LearningOutput["keyTerms"] = [];
@@ -100,6 +109,7 @@ function coerceOutput(raw: Record<string, unknown>): LearningOutput {
     shortSummaryVi,
     keyTerms,
     simpleExplanationVi,
+    englishRecapEn,
     quizQuestions,
     possibleConfusingPoints,
   };
@@ -154,6 +164,7 @@ export async function generateLearning(transcript: string): Promise<LearningOutp
       shortSummaryVi: content.slice(0, 2000),
       keyTerms: [],
       simpleExplanationVi: "",
+      englishRecapEn: "",
       quizQuestions: [],
       possibleConfusingPoints: [],
     };

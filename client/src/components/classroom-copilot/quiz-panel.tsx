@@ -15,8 +15,8 @@ export function QuizPanel({ questions }: { questions: QuizQuestion[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Quiz nhanh</CardTitle>
-        <CardDescription>Ôn lại nội dung từ transcript</CardDescription>
+        <CardTitle className="text-base">Quick quiz</CardTitle>
+        <CardDescription>Review content from the transcript</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <ol className="space-y-4">
@@ -44,7 +44,7 @@ export function QuizPanel({ questions }: { questions: QuizQuestion[] }) {
                   onClick={() => setRevealed((r) => ({ ...r, [idx]: !r[idx] }))}
                   className={cn(revealed[idx] && "border-primary/40 bg-primary/5")}
                 >
-                  {revealed[idx] ? "Ẩn đáp án" : "Xem đáp án"}
+                  {revealed[idx] ? "Hide answer" : "Show answer"}
                 </Button>
                 {revealed[idx] ? (
                   <span className="text-sm font-medium text-primary">{q.answer}</span>
