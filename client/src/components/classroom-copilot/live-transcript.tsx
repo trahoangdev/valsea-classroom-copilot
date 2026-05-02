@@ -39,7 +39,7 @@ export function LiveTranscript({ partial, finals }: Props) {
                 <p className="text-sm text-muted-foreground">
                   Click <span className="font-medium text-foreground">Start listening</span> to capture (VALSEA
                   realtime), upload audio, or <span className="font-medium text-foreground">Insert demo script</span>{" "}
-                  (AGENTS.md §17) to try <span className="font-medium text-foreground">Generate notes</span> without a mic.
+                  to try <span className="font-medium text-foreground">Generate notes</span> without a mic.
                 </p>
               </div>
             </div>

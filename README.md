@@ -41,7 +41,7 @@ NEXT_PUBLIC_WS_URL=ws://localhost:3001/ws
 ## Demo flow
 
 1. Open the app, click **Start listening**, allow the microphone.
-2. Speak (try the script in `AGENTS.md` §17 — gradient descent / learning rate), **or** click **Chèn kịch bản demo (§17)** to push that text to the gateway and UI (no mic / no VALSEA needed for transcript).
+2. Speak (try the script in `AGENTS.md` — gradient descent / learning rate), **or** click **Chèn kịch bản demo (§17)** to push that text to the gateway and UI (no mic / no VALSEA needed for transcript).
 3. Watch the live transcript; click **Stop** when finished (if you used the mic).
 4. Click **Generate notes** — structured JSON-backed summary, terms, quiz. While the LLM runs, the learning panel shows a loading skeleton and the status badge spins.
 5. Use **Tải .md** / **Tải .json** in the learning panel to export transcript + notes.
