@@ -1,12 +1,16 @@
 "use client"
 
-// import { Button } from "@/components/ui/button"
+import * as React from "react"
+import { Settings } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 // import { CommandSearch, SearchTrigger } from "@/components/command-search"
 import { ModeToggle } from "@/components/mode-toggle"
+import { ThemeCustomizer } from "@/components/theme-customizer"
 
 export function SiteHeader() {
+  const [themeCustomizerOpen, setThemeCustomizerOpen] = React.useState(false)
   // const [searchOpen, setSearchOpen] = React.useState(false)
 
   // React.useEffect(() => {
@@ -35,6 +39,16 @@ export function SiteHeader() {
           </div> */}
           <div className="flex-1" />
           <div className="ml-auto flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => setThemeCustomizerOpen(true)}
+              className="cursor-pointer"
+              aria-label="Theme and layout settings"
+            >
+              <Settings className="h-[1.2rem] w-[1.2rem]" />
+            </Button>
             {/* <Button variant="ghost" asChild size="sm" className="hidden sm:flex">
               <a
                 href="https://shadcnstore.com/blocks"
@@ -69,6 +83,10 @@ export function SiteHeader() {
           </div>
         </div>
       </header>
+      <ThemeCustomizer
+        open={themeCustomizerOpen}
+        onOpenChange={setThemeCustomizerOpen}
+      />
       {/* <CommandSearch open={searchOpen} onOpenChange={setSearchOpen} /> */}
     </>
   )
