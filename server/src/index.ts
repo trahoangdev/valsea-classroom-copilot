@@ -9,6 +9,8 @@ import { HybridSessionStore } from "./hybridStore.js";
 import {
   connectValseaRealtime,
   sendAudioAppend,
+  sendAudioCommit,
+  sendSessionStop,
   type NormalizedValsea,
 } from "./valseaRealtimeClient.js";
 import { transcribeAudioFile } from "./valseaBatchClient.js";
@@ -372,11 +374,11 @@ async function main(): Promise<void> {
     }
     const buffer = Buffer.concat(chunks);
     try {
-      const text = await transcribeAudioFile(buffer, mp.filename || "upload.wav", batchLang);
+      const result = await transcribeAudioFile(buffer, mp.filename || "upload.wav", batchLang);
       if (typeof q.sessionId === "string" && q.sessionId.trim()) {
-        store.replaceTranscriptFromBulk(q.sessionId.trim(), text);
+        store.replaceTranscriptFromBulk(q.sessionId.trim(), result.text);
       }
-      return { text };
+      return { text: result.text, valsea: result.raw };
     } catch (e) {
       reply.code(502);
       return {
@@ -403,6 +405,26 @@ async function main(): Promise<void> {
           sendJson(socket, { type: "session.status", status: "listening" });
           continue;
         }
+        if (ev.kind === "session_created") {
+          log("valsea_session_created", {
+            sessionId: session.sessionId,
+            valseaSessionId: ev.sessionId,
+          });
+          continue;
+        }
+        if (ev.kind === "error") {
+          log("valsea_error_event", {
+            sessionId: session.sessionId,
+            code: ev.code,
+            message: ev.message,
+          });
+          sendJson(socket, {
+            type: "error",
+            message: ev.code ? `VALSEA ${ev.code}: ${ev.message}` : ev.message,
+            recoverable: true,
+          });
+          continue;
+        }
         if (ev.kind === "transcript_partial") {
           const t = session.processor.ingestPartial(ev.text);
           if (t) {
@@ -414,6 +436,14 @@ async function main(): Promise<void> {
         }
         if (ev.kind === "transcript_final") {
           session.lastPartial = "";
+          if (ev.timestampMs !== undefined || ev.rawText || ev.corrections) {
+            log("valsea_transcript_metadata", {
+              sessionId: session.sessionId,
+              timestampMs: ev.timestampMs,
+              hasRawText: Boolean(ev.rawText),
+              correctionCount: ev.corrections?.length ?? 0,
+            });
+          }
           const chunk = session.processor.ingestFinal(ev.text);
           log("transcript_received", { final: true });
           if (chunk) {
@@ -620,6 +650,8 @@ async function main(): Promise<void> {
           if (flushed) {
             pushTranscriptFinal(socket, session, flushed, sessionHolder);
           }
+          sendAudioCommit(session.valseaWs);
+          sendSessionStop(session.valseaWs);
           store.finalizeSession(
             session.sessionId,
             await resolveTranscriptForLearning(session.sessionId, session)

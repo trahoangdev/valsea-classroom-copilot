@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BookOpen, ExternalLink, Eye, PlusCircle } from "lucide-react";
+import { BookOpen, ExternalLink, Eye, FileAudio, PlusCircle, RadioTower } from "lucide-react";
 import { AudioControls } from "@/components/classroom-copilot/audio-controls";
 import { ConfusionDialog } from "@/components/classroom-copilot/confusion-dialog";
 import { ClassroomErrorAlert } from "@/components/classroom-copilot/classroom-error-alert";
@@ -341,9 +341,12 @@ export default function ClassroomCopilotPage() {
   const onUploadTranscript = useCallback(
     (text: string) => {
       setPartial("");
-      appendFinal({ id: crypto.randomUUID(), text });
+      setFinals([{ id: crypto.randomUUID(), text }]);
+      setLearning(null);
+      setLiveAssistEntries([]);
+      lastAutoTranscriptSigRef.current = "";
     },
-    [appendFinal]
+    []
   );
 
   const onSeedDemoScript = useCallback(async () => {
@@ -381,6 +384,16 @@ export default function ClassroomCopilotPage() {
             <p className="max-w-2xl text-muted-foreground">
               Classroom speech (Vietnamese + English) → live transcript → summary, key terms, and quiz.
             </p>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                <RadioTower className="size-3.5" aria-hidden />
+                Powered by VALSEA Realtime
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/25 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+                <FileAudio className="size-3.5" aria-hidden />
+                Powered by VALSEA Batch
+              </span>
+            </div>
           </div>
           <div className="flex flex-col items-start gap-2 md:items-end">
             <SessionStatusBadge status={status} />
@@ -452,7 +465,7 @@ export default function ClassroomCopilotPage() {
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
               <div className="min-w-0 flex-1 space-y-3">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Live session
+                  Live session · VALSEA Realtime
                 </p>
                 <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                   <AudioControls
@@ -496,7 +509,7 @@ export default function ClassroomCopilotPage() {
               </div>
               <div className="flex min-w-0 flex-col gap-2 lg:items-end lg:border-l lg:border-border lg:pl-8">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground lg:text-right">
-                  Demo and batch
+                  Demo and batch · VALSEA Batch
                 </p>
                 <div className="flex flex-wrap items-center gap-2 lg:justify-end">
                   <Button
@@ -515,6 +528,7 @@ export default function ClassroomCopilotPage() {
                     httpBase={HTTP_BASE}
                     sessionId={sessionId}
                     disabled={status === "generating_outputs" || demoLoading}
+                    willReplace={hasTranscript || Boolean(learning)}
                     onTranscript={onUploadTranscript}
                     onError={(m) => setErrorMsg(m)}
                   />

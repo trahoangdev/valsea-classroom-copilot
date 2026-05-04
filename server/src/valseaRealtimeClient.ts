@@ -3,9 +3,17 @@ import WebSocket from "ws";
 const VALSEA_REALTIME_URL = "wss://api.valsea.ai/v1/realtime";
 
 export type NormalizedValsea =
+  | { kind: "session_created"; sessionId?: string }
   | { kind: "session_ready" }
   | { kind: "transcript_partial"; text: string }
-  | { kind: "transcript_final"; text: string }
+  | {
+      kind: "transcript_final";
+      text: string;
+      rawText?: string;
+      timestampMs?: number;
+      corrections?: unknown[];
+    }
+  | { kind: "error"; message: string; code?: string }
   | { kind: "unknown"; raw: Record<string, unknown> };
 
 function pickText(obj: Record<string, unknown>): string | undefined {
@@ -24,6 +32,21 @@ export function normalizeValseaMessage(raw: unknown): NormalizedValsea[] {
   if (typeof raw !== "object" || raw === null) return [];
   const o = raw as Record<string, unknown>;
   const type = typeof o.type === "string" ? o.type.toLowerCase() : "";
+  const code = typeof o.code === "string" ? o.code : undefined;
+  const message = typeof o.message === "string" ? o.message : undefined;
+
+  if (type === "error" || code || (message && type.includes("error"))) {
+    return [{ kind: "error", message: message ?? "VALSEA realtime error", code }];
+  }
+
+  if (type === "session.created") {
+    return [
+      {
+        kind: "session_created",
+        sessionId: typeof o.sessionId === "string" ? o.sessionId : undefined,
+      },
+    ];
+  }
 
   if (
     type.includes("session") &&
@@ -46,7 +69,22 @@ export function normalizeValseaMessage(raw: unknown): NormalizedValsea[] {
         type.includes("partial") ||
         type === "transcript.partial");
 
-    if (finalFlag) return [{ kind: "transcript_final", text }];
+    if (finalFlag) {
+      return [
+        {
+          kind: "transcript_final",
+          text,
+          rawText: typeof o.raw_text === "string" ? o.raw_text : undefined,
+          timestampMs:
+            typeof o.timestampMs === "number"
+              ? o.timestampMs
+              : typeof o.timestamp_ms === "number"
+                ? o.timestamp_ms
+                : undefined,
+          corrections: Array.isArray(o.corrections) ? o.corrections : undefined,
+        },
+      ];
+    }
     if (partialFlag || type.includes("transcript")) {
       return [{ kind: "transcript_partial", text }];
     }
@@ -137,4 +175,14 @@ export function connectValseaRealtime(
 export function sendAudioAppend(ws: WebSocket | null, base64Pcm16: string): void {
   if (!ws || ws.readyState !== WebSocket.OPEN) return;
   ws.send(JSON.stringify({ type: "audio.append", audio: base64Pcm16 }));
+}
+
+export function sendAudioCommit(ws: WebSocket | null): void {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify({ type: "audio.commit" }));
+}
+
+export function sendSessionStop(ws: WebSocket | null): void {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify({ type: "session.stop" }));
 }
