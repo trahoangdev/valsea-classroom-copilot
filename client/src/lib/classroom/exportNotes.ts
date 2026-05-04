@@ -52,6 +52,9 @@ export function buildNotesMarkdown(transcript: string, output: LearningOutput): 
     if (output.valsea.formattedNotes) {
       lines.push("### Formatted notes", "", output.valsea.formattedNotes, "");
     }
+    if (output.valsea.translatedTextEn) {
+      lines.push("### Translation (EN)", "", output.valsea.translatedTextEn, "");
+    }
   }
   if (output.possibleConfusingPoints.length) {
     lines.push("## Possibly confusing", "");

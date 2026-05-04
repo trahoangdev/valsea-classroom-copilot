@@ -316,6 +316,7 @@ async function main(): Promise<void> {
         semanticTagCount: valsea.semanticTags.length,
         hasClarifiedText: Boolean(valsea.clarifiedText),
         hasFormattedNotes: Boolean(valsea.formattedNotes),
+        hasTranslationEn: Boolean(valsea.translatedTextEn),
         errorCount: valsea.errors.length,
       });
       const output = await generateLearning(transcript, valsea);
@@ -709,6 +710,7 @@ async function main(): Promise<void> {
               semanticTagCount: valsea.semanticTags.length,
               hasClarifiedText: Boolean(valsea.clarifiedText),
               hasFormattedNotes: Boolean(valsea.formattedNotes),
+              hasTranslationEn: Boolean(valsea.translatedTextEn),
               errorCount: valsea.errors.length,
             });
             const output = await generateLearning(transcript, valsea);

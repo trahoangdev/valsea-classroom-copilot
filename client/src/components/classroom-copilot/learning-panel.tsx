@@ -142,7 +142,7 @@ export function LearningPanel({ output, transcriptText, sessionId, generating }:
               {output.valsea?.enabled ? (
                 <SectionCard
                   title="VALSEA learning context"
-                  description="Evidence from annotation, clarification, and formatting APIs"
+                  description="Evidence from annotation, clarification, translation, and formatting APIs"
                 >
                   <div className="space-y-3 text-sm text-muted-foreground">
                     {output.valsea.semanticTags.length ? (
@@ -166,6 +166,16 @@ export function LearningPanel({ output, transcriptText, sessionId, generating }:
                         <pre className="mt-3 whitespace-pre-wrap break-words text-xs leading-relaxed">
                           {output.valsea.formattedNotes}
                         </pre>
+                      </details>
+                    ) : null}
+                    {output.valsea.translatedTextEn ? (
+                      <details className="rounded-lg border bg-muted/30 p-3" open>
+                        <summary className="cursor-pointer font-medium text-foreground">
+                          VALSEA translation (English)
+                        </summary>
+                        <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed">
+                          {output.valsea.translatedTextEn}
+                        </p>
                       </details>
                     ) : null}
                     {output.valsea.errors.length ? (

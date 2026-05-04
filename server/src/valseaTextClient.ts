@@ -107,6 +107,7 @@ export async function buildValseaLearningContext(
     annotatedText: "",
     clarifiedText: "",
     formattedNotes: "",
+    translatedTextEn: "",
     errors: [],
   };
 
@@ -115,7 +116,7 @@ export async function buildValseaLearningContext(
     return { ...empty, errors: ["VALSEA_API_KEY is not configured"] };
   }
 
-  const [annotation, clarification] = await Promise.all([
+  const [annotation, clarification, translation] = await Promise.all([
     safeCall("annotations", () =>
       postValseaJson("/v1/annotations", {
         model: "valsea-annotate",
@@ -131,6 +132,15 @@ export async function buildValseaLearningContext(
         model: "valsea-clarify",
         text,
         language: "vietnamese",
+        response_format: "verbose_json",
+      })
+    ),
+    safeCall("translations", () =>
+      postValseaJson("/v1/translations", {
+        model: "valsea-translate",
+        text,
+        source: "auto",
+        target: "english",
         response_format: "verbose_json",
       })
     ),
@@ -156,6 +166,17 @@ export async function buildValseaLearningContext(
     ]);
   } else {
     errors.push(clarification.error);
+  }
+
+  let translatedTextEn = "";
+  if (translation.ok) {
+    translatedTextEn = stringField(translation.data, [
+      "translated_text",
+      "translatedText",
+      "text",
+    ]);
+  } else {
+    errors.push(translation.error);
   }
 
   const formatting = await safeCall("formatting", () =>
@@ -184,11 +205,12 @@ export async function buildValseaLearningContext(
   }
 
   return {
-    enabled: annotation.ok || clarification.ok || formatting.ok,
+    enabled: annotation.ok || clarification.ok || translation.ok || formatting.ok,
     semanticTags,
     annotatedText,
     clarifiedText,
     formattedNotes,
+    translatedTextEn,
     errors,
   };
 }
