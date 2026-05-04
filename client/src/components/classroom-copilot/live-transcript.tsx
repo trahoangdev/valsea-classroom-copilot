@@ -4,7 +4,6 @@ import { forwardRef, useEffect, useRef } from "react";
 import { Mic } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { highlightEnglishTokens } from "@/lib/classroom/highlightEnglishTokens";
 
 type Props = {
   partial: string;
@@ -74,14 +73,14 @@ export const LiveTranscript = forwardRef<HTMLDivElement, Props>(function LiveTra
                     {i + 1}
                   </span>
                   <p className="text-sm leading-relaxed text-foreground">
-                    {highlightEnglishTokens(f.text)}
+                    {f.text}
                   </p>
                 </article>
               ))}
               {partial ? (
                 <div className="border-l-2 border-accent pl-4">
                   <p className="text-sm italic leading-relaxed text-muted-foreground">
-                    {highlightEnglishTokens(partial)}
+                    {partial}
                     <span
                       className="ml-1 inline-block h-4 w-px animate-pulse bg-primary"
                       aria-hidden
