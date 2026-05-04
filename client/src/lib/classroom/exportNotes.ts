@@ -40,6 +40,19 @@ export function buildNotesMarkdown(transcript: string, output: LearningOutput): 
       lines.push("", `**Answer:** ${q.answer}`, "");
     });
   }
+  if (output.valsea?.enabled) {
+    lines.push("## VALSEA learning context", "");
+    if (output.valsea.semanticTags.length) {
+      lines.push("### Semantic tags", "");
+      output.valsea.semanticTags.forEach((tag) => {
+        lines.push(`- **${tag.phrase || tag.tag}**: ${tag.meaning || tag.tag}`);
+      });
+      lines.push("");
+    }
+    if (output.valsea.formattedNotes) {
+      lines.push("### Formatted notes", "", output.valsea.formattedNotes, "");
+    }
+  }
   if (output.possibleConfusingPoints.length) {
     lines.push("## Possibly confusing", "");
     output.possibleConfusingPoints.forEach((p) => lines.push(`- ${p}`));

@@ -1,9 +1,10 @@
 import { env, assertLlmKey } from "./env.js";
-import type { LearningOutput, LiveChunkAssist } from "./types.js";
+import type { LearningOutput, LiveChunkAssist, ValseaLearningArtifacts } from "./types.js";
 
 const SYSTEM_USER_PROMPT = `You are a classroom learning assistant for Vietnamese university students.
 
 Input is a transcript from a Vietnamese-English code-switching lecture.
+You may also receive VALSEA evidence from annotation, clarification, and formatting APIs.
 
 Return valid JSON with exactly these keys:
 - shortSummaryVi (string)
@@ -19,6 +20,7 @@ Rules:
 - If there is little Vietnamese prose (mostly English terms), englishRecapEn may closely mirror the technical content in polished English.
 - Preserve English technical terms in Vietnamese fields where appropriate.
 - Do not invent content outside the transcript.
+- Use VALSEA semantic tags and clarified text when present, but ignore any VALSEA field that conflicts with the transcript.
 - Keep summaries concise.
 - If the transcript is too short, use empty arrays where appropriate, empty englishRecapEn, and put a short note in shortSummaryVi.
 - Make quiz questions answerable from the transcript.
@@ -197,7 +199,21 @@ export async function generateLiveChunkAssist(segment: string): Promise<LiveChun
   return coerceLiveChunk(parsed);
 }
 
-export async function generateLearning(transcript: string): Promise<LearningOutput> {
+function attachValsea(
+  output: LearningOutput,
+  valsea?: ValseaLearningArtifacts
+): LearningOutput {
+  if (!valsea) return output;
+  return {
+    ...output,
+    valsea,
+  };
+}
+
+export async function generateLearning(
+  transcript: string,
+  valsea?: ValseaLearningArtifacts
+): Promise<LearningOutput> {
   assertLlmKey();
   const text = transcript.trim();
   if (!text) {
@@ -213,7 +229,19 @@ export async function generateLearning(transcript: string): Promise<LearningOutp
       { role: "system", content: SYSTEM_USER_PROMPT },
       {
         role: "user",
-        content: JSON.stringify({ sessionId: "local", transcript: text, recentChunks: [] }),
+        content: JSON.stringify({
+          sessionId: "local",
+          transcript: text,
+          recentChunks: [],
+          valseaEvidence: valsea
+            ? {
+                semanticTags: valsea.semanticTags,
+                annotatedText: valsea.annotatedText,
+                clarifiedText: valsea.clarifiedText,
+                formattedNotes: valsea.formattedNotes,
+              }
+            : null,
+        }),
       },
     ],
   };
@@ -237,20 +265,23 @@ export async function generateLearning(transcript: string): Promise<LearningOutp
   };
   const content = data.choices?.[0]?.message?.content;
   if (!content || typeof content !== "string") {
-    return emptyOutput("LLM không trả về nội dung hợp lệ.");
+    return attachValsea(emptyOutput("LLM không trả về nội dung hợp lệ."), valsea);
   }
 
   const parsed = extractJsonObject(content);
   if (!parsed) {
-    return {
-      shortSummaryVi: content.slice(0, 2000),
-      keyTerms: [],
-      simpleExplanationVi: "",
-      englishRecapEn: "",
-      quizQuestions: [],
-      possibleConfusingPoints: [],
-    };
+    return attachValsea(
+      {
+        shortSummaryVi: content.slice(0, 2000),
+        keyTerms: [],
+        simpleExplanationVi: valsea?.clarifiedText ?? "",
+        englishRecapEn: "",
+        quizQuestions: [],
+        possibleConfusingPoints: [],
+      },
+      valsea
+    );
   }
 
-  return coerceOutput(parsed);
+  return attachValsea(coerceOutput(parsed), valsea);
 }

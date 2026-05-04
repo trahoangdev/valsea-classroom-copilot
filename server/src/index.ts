@@ -14,6 +14,7 @@ import {
   type NormalizedValsea,
 } from "./valseaRealtimeClient.js";
 import { transcribeAudioFile } from "./valseaBatchClient.js";
+import { buildValseaLearningContext } from "./valseaTextClient.js";
 import { TranscriptProcessor, type TranscriptChunk } from "./transcriptProcessor.js";
 import { generateLearning, generateLiveChunkAssist } from "./intelligence.js";
 import type { BackendToFrontend, FrontendToBackend } from "./types.js";
@@ -308,7 +309,16 @@ async function main(): Promise<void> {
         reply.code(400);
         return { error: "Transcript is empty for this session" };
       }
-      const output = await generateLearning(transcript);
+      const valsea = await buildValseaLearningContext(transcript);
+      log("valsea_learning_context", {
+        sessionId,
+        enabled: valsea.enabled,
+        semanticTagCount: valsea.semanticTags.length,
+        hasClarifiedText: Boolean(valsea.clarifiedText),
+        hasFormattedNotes: Boolean(valsea.formattedNotes),
+        errorCount: valsea.errors.length,
+      });
+      const output = await generateLearning(transcript, valsea);
       store.appendLearning(sessionId, output);
       return { output };
     } catch (e) {
@@ -692,7 +702,16 @@ async function main(): Promise<void> {
               });
               return;
             }
-            const output = await generateLearning(transcript);
+            const valsea = await buildValseaLearningContext(transcript);
+            log("valsea_learning_context", {
+              sessionId: msg.sessionId,
+              enabled: valsea.enabled,
+              semanticTagCount: valsea.semanticTags.length,
+              hasClarifiedText: Boolean(valsea.clarifiedText),
+              hasFormattedNotes: Boolean(valsea.formattedNotes),
+              errorCount: valsea.errors.length,
+            });
+            const output = await generateLearning(transcript, valsea);
             store.appendLearning(msg.sessionId, output);
             sendJson(socket, { type: "learning.output", output });
             const statusAfter: BackendToFrontend =

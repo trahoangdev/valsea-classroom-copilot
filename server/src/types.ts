@@ -60,6 +60,21 @@ export type QuizQuestion = {
   answer: string;
 };
 
+export type ValseaSemanticTag = {
+  tag: string;
+  phrase: string;
+  meaning: string;
+};
+
+export type ValseaLearningArtifacts = {
+  enabled: boolean;
+  semanticTags: ValseaSemanticTag[];
+  annotatedText: string;
+  clarifiedText: string;
+  formattedNotes: string;
+  errors: string[];
+};
+
 export type LearningOutput = {
   shortSummaryVi: string;
   keyTerms: KeyTerm[];
@@ -68,4 +83,5 @@ export type LearningOutput = {
   englishRecapEn: string;
   quizQuestions: QuizQuestion[];
   possibleConfusingPoints: string[];
+  valsea?: ValseaLearningArtifacts;
 };

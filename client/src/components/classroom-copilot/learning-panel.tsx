@@ -75,12 +75,12 @@ export function LearningPanel({ output, transcriptText, sessionId, generating }:
   };
 
   return (
-    <Card className="flex min-h-[420px] w-full flex-col gap-0 py-0">
+    <Card className="flex min-h-[800px] w-full flex-col gap-0 py-0">
       <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4 border-b px-6 py-4">
         <div>
           <CardTitle className="text-lg">Learning notes</CardTitle>
           <CardDescription>
-            Summary (VI + EN), key terms, and quiz from the LLM (via gateway)
+            VALSEA-enriched notes: semantic tags, clarification, formatting, and quiz via gateway
           </CardDescription>
         </div>
         {output ? (
@@ -113,7 +113,7 @@ export function LearningPanel({ output, transcriptText, sessionId, generating }:
             </div>
           </div>
         ) : (
-          <ScrollArea className="h-[min(60vh,520px)] px-6 py-4">
+          <ScrollArea className="h-[min(72vh,680px)] px-6 py-4">
             <div className="space-y-4 pr-3">
               <SectionCard title="Summary (Vietnamese)">
                 <p className="text-sm leading-relaxed text-foreground">{output.shortSummaryVi}</p>
@@ -138,6 +138,44 @@ export function LearningPanel({ output, transcriptText, sessionId, generating }:
 
               <KeyTermsList terms={output.keyTerms} />
               <QuizPanel questions={output.quizQuestions} />
+
+              {output.valsea?.enabled ? (
+                <SectionCard
+                  title="VALSEA learning context"
+                  description="Evidence from annotation, clarification, and formatting APIs"
+                >
+                  <div className="space-y-3 text-sm text-muted-foreground">
+                    {output.valsea.semanticTags.length ? (
+                      <div className="flex flex-wrap gap-2">
+                        {output.valsea.semanticTags.slice(0, 12).map((tag, i) => (
+                          <span
+                            key={`${tag.tag}-${tag.phrase}-${i}`}
+                            className="rounded-full border bg-muted/50 px-2.5 py-1 text-xs"
+                            title={tag.meaning}
+                          >
+                            {tag.phrase || tag.tag}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                    {output.valsea.formattedNotes ? (
+                      <details className="rounded-lg border bg-muted/30 p-3">
+                        <summary className="cursor-pointer font-medium text-foreground">
+                          VALSEA formatted notes
+                        </summary>
+                        <pre className="mt-3 whitespace-pre-wrap break-words text-xs leading-relaxed">
+                          {output.valsea.formattedNotes}
+                        </pre>
+                      </details>
+                    ) : null}
+                    {output.valsea.errors.length ? (
+                      <p className="text-xs text-amber-700 dark:text-amber-400">
+                        Some VALSEA enrichment calls were unavailable; notes fell back safely.
+                      </p>
+                    ) : null}
+                  </div>
+                </SectionCard>
+              ) : null}
 
               {output.possibleConfusingPoints.length ? (
                 <SectionCard title="Possibly confusing">
