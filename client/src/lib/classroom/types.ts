@@ -71,6 +71,7 @@ export type ValseaLearningArtifacts = {
   annotatedText: string;
   clarifiedText: string;
   formattedNotes: string;
+  translatedTextEn: string;
   errors: string[];
 };
 

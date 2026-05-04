@@ -239,6 +239,7 @@ export async function generateLearning(
                 annotatedText: valsea.annotatedText,
                 clarifiedText: valsea.clarifiedText,
                 formattedNotes: valsea.formattedNotes,
+                translatedTextEn: valsea.translatedTextEn,
               }
             : null,
         }),
