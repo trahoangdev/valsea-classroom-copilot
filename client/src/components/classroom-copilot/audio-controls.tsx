@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 type Props = {
   status: SessionUiStatus;
   hasTranscript: boolean;
+  /** True while mic capture is running (e.g. VALSEA reconnecting but user can still stop). */
+  micHot?: boolean;
   onStart: () => void;
   onStop: () => void;
   onGenerate: () => void;
@@ -17,6 +19,7 @@ type Props = {
 export function AudioControls({
   status,
   hasTranscript,
+  micHot = false,
   onStart,
   onStop,
   onGenerate,
@@ -44,12 +47,18 @@ export function AudioControls({
         ) : (
           <Mic className="size-4" aria-hidden />
         )}
-        {isConnecting ? "Đang kết nối…" : "Bắt đầu nghe"}
+        {isConnecting ? "Connecting…" : "Start listening"}
       </Button>
 
-      <Button type="button" variant="outline" disabled={!listening} onClick={onStop} className="gap-2">
+      <Button
+        type="button"
+        variant="outline"
+        disabled={!listening && !micHot}
+        onClick={onStop}
+        className="gap-2"
+      >
         <Square className="size-3.5 fill-current" aria-hidden />
-        Dừng
+        Stop
       </Button>
 
       <Button
@@ -64,12 +73,12 @@ export function AudioControls({
         ) : (
           <Sparkles className="size-4" aria-hidden />
         )}
-        {isGenerating ? "Đang tạo ghi chú…" : "Tạo ghi chú"}
+        {isGenerating ? "Generating notes…" : "Generate notes"}
       </Button>
 
       <Button type="button" variant="ghost" onClick={onConfused} className="gap-2 text-muted-foreground">
         <HelpCircle className="size-4" aria-hidden />
-        Tôi đang bối rối
+        I&apos;m confused
       </Button>
     </div>
   );

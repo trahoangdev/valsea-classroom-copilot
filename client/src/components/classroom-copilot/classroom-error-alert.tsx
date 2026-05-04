@@ -21,17 +21,17 @@ export function ClassroomErrorAlert({ message, healthCheckUrl, onDismiss }: Prop
         <div className="flex gap-3">
           <AlertCircle className="size-5 shrink-0 text-destructive" aria-hidden />
           <div className="min-w-0 flex-1 space-y-2">
-            <p className="text-sm font-semibold text-destructive">Có lỗi xảy ra</p>
+            <p className="text-sm font-semibold text-destructive">Something went wrong</p>
             <p className="text-sm text-foreground">{message}</p>
             {hint ? (
               <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">Gợi ý:</span> {hint}
+                <span className="font-medium text-foreground">Hint:</span> {hint}
               </p>
             ) : null}
             <p className="text-xs text-muted-foreground">
               <Button variant="link" className="h-auto p-0 text-xs" asChild>
                 <Link href={healthCheckUrl} target="_blank" rel="noopener noreferrer">
-                  Kiểm tra /health trên gateway
+                  Check /health on gateway
                 </Link>
               </Button>
             </p>
@@ -39,7 +39,7 @@ export function ClassroomErrorAlert({ message, healthCheckUrl, onDismiss }: Prop
         </div>
         <div className="flex justify-end">
           <Button type="button" variant="outline" size="sm" onClick={onDismiss}>
-            Đóng
+            Dismiss
           </Button>
         </div>
       </CardContent>

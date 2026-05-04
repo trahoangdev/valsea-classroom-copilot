@@ -95,6 +95,7 @@ export class SupabasePersistence {
       short_summary_vi: output.shortSummaryVi,
       key_terms_json: output.keyTerms,
       simple_explanation_vi: output.simpleExplanationVi,
+      english_recap_en: output.englishRecapEn || null,
       quiz_json: output.quizQuestions,
       confusing_points_json: output.possibleConfusingPoints,
     });
@@ -191,7 +192,7 @@ export class SupabasePersistence {
     const { data: learnings } = await this.client
       .from("learning_outputs")
       .select(
-        "short_summary_vi, key_terms_json, simple_explanation_vi, quiz_json, confusing_points_json"
+        "short_summary_vi, key_terms_json, simple_explanation_vi, english_recap_en, quiz_json, confusing_points_json"
       )
       .eq("session_id", sessionId)
       .order("created_at", { ascending: true });
@@ -200,6 +201,7 @@ export class SupabasePersistence {
       shortSummaryVi: r.short_summary_vi ?? "",
       keyTerms: (r.key_terms_json as LearningOutput["keyTerms"]) ?? [],
       simpleExplanationVi: r.simple_explanation_vi ?? "",
+      englishRecapEn: (r as { english_recap_en?: string | null }).english_recap_en ?? "",
       quizQuestions: (r.quiz_json as LearningOutput["quizQuestions"]) ?? [],
       possibleConfusingPoints: (r.confusing_points_json as string[]) ?? [],
     }));

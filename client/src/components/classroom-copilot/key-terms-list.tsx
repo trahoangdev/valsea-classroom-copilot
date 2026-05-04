@@ -8,8 +8,8 @@ export function KeyTermsList({ terms }: { terms: KeyTerm[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Thuật ngữ chính</CardTitle>
-        <CardDescription>Từ tiếng Anh trong bài, giải thích tiếng Việt</CardDescription>
+        <CardTitle className="text-base">Key terms</CardTitle>
+        <CardDescription>English terms from the lecture, Vietnamese explanations</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -22,7 +22,7 @@ export function KeyTermsList({ terms }: { terms: KeyTerm[] }) {
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{t.definitionVi}</p>
               {t.whyItMatters ? (
                 <p className="mt-3 border-t pt-3 text-xs leading-relaxed text-foreground/80">
-                  <span className="font-medium text-muted-foreground">Vì sao: </span>
+                  <span className="font-medium text-muted-foreground">Why it matters: </span>
                   {t.whyItMatters}
                 </p>
               ) : null}

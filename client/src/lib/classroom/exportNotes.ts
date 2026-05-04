@@ -17,6 +17,9 @@ export function buildNotesMarkdown(transcript: string, output: LearningOutput): 
     output.shortSummaryVi || "_(none)_",
     "",
   ];
+  if (output.englishRecapEn?.trim()) {
+    lines.push("## Lecture recap (EN)", "", output.englishRecapEn.trim(), "");
+  }
   if (output.simpleExplanationVi) {
     lines.push("## Simple explanation (VI)", "", output.simpleExplanationVi, "");
   }

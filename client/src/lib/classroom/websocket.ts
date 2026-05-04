@@ -1,4 +1,4 @@
-import type { BackendToFrontend } from "@/lib/classroom/types";
+import type { BackendToFrontend, FrontendToGateway } from "@/lib/classroom/types";
 
 export type GatewayHandlers = {
   onOpen?: () => void;
@@ -35,7 +35,7 @@ export function connectGateway(url: string, handlers: GatewayHandlers): WebSocke
   return ws;
 }
 
-export function sendJson(ws: WebSocket | null, payload: object): void {
+export function sendJson(ws: WebSocket | null, payload: FrontendToGateway): void {
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(payload));
   }

@@ -2,9 +2,13 @@ import { env } from "./env.js";
 
 const BATCH_URL = "https://api.valsea.ai/v1/audio/transcriptions";
 
+/** VALSEA batch `language` hint; wrong language biases script (e.g. EN audio + `vietnamese` → garbled VI). */
+export type ValseaBatchLanguage = "vietnamese" | "english";
+
 export async function transcribeAudioFile(
   buffer: Buffer,
-  filename: string
+  filename: string,
+  language: ValseaBatchLanguage = "vietnamese"
 ): Promise<string> {
   if (!env.valseaApiKey) {
     throw new Error("VALSEA_API_KEY is not configured");
@@ -12,7 +16,7 @@ export async function transcribeAudioFile(
 
   const form = new FormData();
   form.set("model", "valsea-transcribe");
-  form.set("language", "vietnamese");
+  form.set("language", language);
   const name = filename || "upload.wav";
   const copy = Buffer.from(buffer);
   const body =

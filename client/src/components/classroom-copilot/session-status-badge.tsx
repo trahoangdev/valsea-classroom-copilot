@@ -6,14 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const LABELS: Record<SessionUiStatus, string> = {
-  idle: "Sẵn sàng",
-  requesting_microphone: "Đang lấy mic…",
-  connecting: "Kết nối…",
-  listening: "Đang nghe",
-  transcribing: "Nhận dạng…",
-  generating_outputs: "Đang tạo ghi chú…",
-  error: "Lỗi",
-  stopped: "Đã dừng",
+  idle: "Ready",
+  requesting_microphone: "Requesting mic…",
+  connecting: "Connecting…",
+  listening: "Listening",
+  transcribing: "Transcribing…",
+  generating_outputs: "Generating notes…",
+  error: "Error",
+  stopped: "Stopped",
 };
 
 export function SessionStatusBadge({ status }: { status: SessionUiStatus }) {
