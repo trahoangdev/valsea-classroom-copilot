@@ -89,7 +89,6 @@ Experience the template in action:
 │   ├── 📁 lib/
 │   └── 📁 types/
 ├── 📁 public/
-├── 📁 docs/                      # VitePress documentation (legacy paths may mention old layout)
 ├── 📄 package.json
 ├── 📄 next.config.ts
 └── 📄 README.md
