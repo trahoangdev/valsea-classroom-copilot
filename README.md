@@ -1,12 +1,31 @@
 # Vietnamese–English Classroom Copilot
 
-Realtime classroom assistant for Vietnamese university lectures with **Vietnamese / English code-switching**. Speech goes from the browser microphone through a **Node gateway** to **VALSEA realtime ASR**. Optional **live assist** adds short per-segment Vietnamese summary, explanation, and an English line when transcript segments finalize. Full **learning notes** (Vietnamese summary, English recap, key terms, quiz, confusion hints) are produced by an **LLM on the server** when you click **Generate notes**. **API keys never ship to the browser.**
+Speech-first classroom copilot for Vietnamese university lectures where instructors naturally mix Vietnamese explanations with English technical terms. The app captures microphone audio in the browser, streams **16 kHz PCM16 mono** chunks through a Fastify gateway to **VALSEA Realtime ASR**, then turns the transcript into structured learning material: Vietnamese summary, key terms, simple explanation, English recap, quiz questions, possible confusion points, exports, and session history.
 
-**Track:** VALSEA EdTech Hack Sprint — **Real-Time Classroom Assist** (speech-first, classroom-first; not a generic chatbot). Shared TypeScript shapes for socket messages live in **`server/src/types.ts`**.
+**Track:** VALSEA EdTech Hack Sprint — **Real-Time Classroom Assist** (speech-first, classroom-first; not a generic chatbot).
+
+**One-line pitch:** VALSEA handles the hard voice + language layer for Vietnamese–English code-switching lectures; Classroom Copilot converts that stream into notes, explanations, and quizzes students can use immediately.
+
+## What is implemented
+
+- **Realtime mic capture:** Browser audio is downsampled to **16 kHz PCM16 mono**, base64-encoded, and streamed over WebSocket.
+- **VALSEA realtime ASR:** Gateway connects to `wss://api.valsea.ai/v1/realtime` using `valsea-rtt`, Vietnamese language hint, and correction enabled.
+- **Live transcript:** Partial and final ASR events are normalized, deduplicated, chunked, persisted, and rendered in the UI.
+- **Live Assist:** Optional per-final-segment micro-summary, Vietnamese explanation, and English line via a rate-limited server-side LLM call.
+- **Generate Notes:** Full transcript is enriched with VALSEA text APIs, then sent to an OpenAI-compatible LLM for schema-based JSON learning output.
+- **VALSEA Learning Context:** The UI displays VALSEA semantic tags, formatted notes, and English translation directly, not only the LLM result.
+- **Batch fallback:** Audio upload uses VALSEA batch transcription when realtime mic is unstable.
+- **Demo-safe mode:** Insert a built-in Vietnamese–English script without microphone input.
+- **Confusion signal:** Students can mark “I’m confused” with an optional note.
+- **Session review:** `/session` lists saved sessions; `/session/[id]` shows transcript, learning outputs, and confusion events.
+- **Export:** Download notes as `.md` or `.json`, including VALSEA learning artifacts.
+- **Hybrid persistence:** In-memory store by default; optional Supabase durability.
 
 ## Contents
 
+- [What is implemented](#what-is-implemented)
 - [Architecture](#architecture)
+- [VALSEA endpoints used](#valsea-endpoints-used)
 - [Prerequisites](#prerequisites)
 - [Environment variables](#environment-variables)
 - [Setup](#setup)
@@ -18,21 +37,63 @@ Realtime classroom assistant for Vietnamese university lectures with **Vietnames
 - [Demo script (testing)](#demo-script-testing)
 - [Persistence (Supabase)](#persistence-supabase)
 - [Workspace layout](#workspace-layout)
+- [Deployment notes](#deployment-notes)
 - [Troubleshooting](#troubleshooting)
 - [Acceptance checklist](#acceptance-checklist)
 - [Hackathon definition of done](#hackathon-definition-of-done)
+- [Judge takeaway](#judge-takeaway)
 
 ## Architecture
 
 ```text
 Browser (Next.js)
-  │  PCM16 16 kHz base64 chunks, learning.generate, …
+  │  microphone → Float32 → 16 kHz PCM16 mono → base64
+  │  WebSocket messages: session.start, audio.chunk, learning.generate, …
   ▼
 Fastify gateway (WebSocket /ws + REST)
-  │  VALSEA realtime + batch transcribe
+  │  protects VALSEA / LLM / Supabase secrets
+  │  proxies realtime audio, normalizes transcript events
+  │  chunks + persists transcript, builds VALSEA learning context
   ▼
-VALSEA ASR  →  transcript  →  optional LLM (notes, live assist)
+VALSEA
+  ├─ Realtime ASR
+  ├─ Batch transcription fallback
+  ├─ Annotations
+  ├─ Clarifications
+  ├─ Translations
+  └─ Formatting
+  ▼
+Server-side LLM
+  │  structured JSON notes + live assist
+  ▼
+Frontend UI
+  ├─ Live Transcript
+  ├─ Live Assist Feed
+  ├─ Learning Assistant
+  ├─ VALSEA Learning Context
+  ├─ Export
+  └─ Session Review
 ```
+
+## VALSEA endpoints used
+
+This project uses **6 VALSEA endpoints**:
+
+| # | Endpoint | Used for |
+|---|----------|----------|
+| 1 | `wss://api.valsea.ai/v1/realtime` | Realtime Vietnamese ASR with correction |
+| 2 | `POST /v1/audio/transcriptions` | Batch upload fallback with `verbose_json`, correction, and tags |
+| 3 | `POST /v1/annotations` | Semantic tags and annotated text |
+| 4 | `POST /v1/clarifications` | Simplified Vietnamese explanation |
+| 5 | `POST /v1/translations` | English translation / recap evidence |
+| 6 | `POST /v1/formatting` | Structured lecture notes / meeting-minutes style output |
+
+Text enrichment flow:
+
+1. `annotations`, `clarifications`, and `translations` run in parallel with safe per-call fallback.
+2. `formatting` runs after annotation so semantic tags can be passed into the formatting request.
+3. The gateway injects VALSEA evidence into the LLM prompt.
+4. The final `learning.output` includes both LLM output and `output.valsea` artifacts.
 
 ## Prerequisites
 
@@ -46,7 +107,7 @@ The repo ships **[`.env.example`](./.env.example)** as a single reference. You m
 
 | Variable | Where | Purpose |
 | -------- | ----- | ------- |
-| `VALSEA_API_KEY` | `server/.env` | Backend only — VALSEA realtime & batch |
+| `VALSEA_API_KEY` | `server/.env` | Backend only — VALSEA realtime, batch, annotations, clarifications, translations, formatting |
 | `LLM_API_KEY` | `server/.env` | Backend only — learning notes & live assist |
 | `LLM_BASE_URL` | `server/.env` | Optional; default `https://api.openai.com/v1` |
 | `LLM_MODEL` | `server/.env` | Optional; default `gpt-4o-mini` |
@@ -118,7 +179,7 @@ Per-package: `npm run dev -w client`, `npm run dev -w server`, etc.
 | `WebSocket /ws` | Realtime audio, transcript events, `learning.generate`, `confusion.mark`, `liveAssist.set` |
 | `POST /api/transcribe` | Batch upload → VALSEA `POST /v1/audio/transcriptions` |
 | `POST /api/demo-transcript` | Push demo text into session (no mic / no VALSEA) |
-| `POST /api/generate-notes` | HTTP fallback for learning generation |
+| `POST /api/generate-notes` | HTTP fallback for VALSEA text enrichment + learning generation |
 | `POST /api/confusion` | HTTP fallback for confusion events |
 | `GET /api/sessions` | List sessions (memory + Supabase when enabled) |
 | `GET /api/session/:sessionId` | Session detail |
@@ -155,16 +216,22 @@ Stable `type` strings (JSON bodies). Payload details: **`server/src/types.ts`**.
 - `keyTerms` (array of `term`, `definitionVi`, `whyItMatters`)
 - `quizQuestions` (question, choices, answer)
 - `possibleConfusingPoints` (string array)
+- `valsea` (optional VALSEA learning artifacts: semantic tags, annotated text, clarified text, formatted notes, English translation, API errors)
 
 ## Demo flow
 
-1. Open **Classroom Copilot** at `/classroom-copilot`, click **Start listening**, allow the microphone.
-2. Speak using the [demo script](#demo-script-testing) below, **or** use **Insert demo script** to send that text through the gateway (works without mic or VALSEA for that path).
-3. Watch **Live transcript**; click **Stop** when finished if you used the mic.
-4. Optional: **Live assist during lesson** — after finalized segments (rate-limited, ~12s minimum between LLM calls), the **Live assist** panel shows a short Vietnamese summary, explanation, and an English line. Requires `LLM_API_KEY` and an active WebSocket session.
-5. Optional: **Auto notes every 60s while listening** — triggers note generation over the socket as the transcript grows.
-6. Click **Generate notes** for full structured output. While the LLM runs, the learning panel shows loading state and the status badge updates.
-7. Use **Download .md** / **Download .json** in the learning panel to export transcript + notes.
+1. Open **Classroom Copilot** at `/classroom-copilot`.
+2. Point out the two-column layout: **Live Transcript** on the left, **Learning Assistant** on the right.
+3. Click **Start listening**, allow microphone access, and optionally enable **Live Assist**.
+4. Speak using the [demo script](#demo-script-testing), **or** use **Insert demo script** to seed the session without mic input.
+5. Watch **Live transcript** partials and finals; show **Live Assist** after finalized chunks.
+6. Click **Stop** when finished if you used the mic.
+7. Click **Generate notes** for full structured output.
+8. Show Vietnamese summary, key terms, simple explanation, English recap, quiz, and possible confusing points.
+9. Expand or scroll to **VALSEA Learning Context**: semantic tags, formatted notes, and English translation.
+10. Click **I'm confused** to save a confusion signal.
+11. Use **Download .md** / **Download .json** to export transcript + notes + VALSEA context.
+12. Open `/session` to show saved session history and detail pages.
 
 **Fallback:** **Upload audio** uses batch transcription via `/api/transcribe`, then **Generate notes** (works over HTTP if the WebSocket is closed). Errors include short hints and a pointer to **`GET /health`**.
 
@@ -178,7 +245,7 @@ Use this Vietnamese–English snippet to validate ASR and **Generate notes** (al
 Hôm nay mình học về gradient descent. Khi model dự đoán sai, loss function sẽ cho biết mức độ sai lệch. Gradient descent giúp chúng ta cập nhật weights từng bước để giảm loss. Nhưng nếu learning rate quá cao thì model có thể overshoot và không converge. Nếu learning rate quá thấp thì training sẽ rất chậm.
 ```
 
-**What you should see roughly:** a short Vietnamese summary mentioning gradient descent, loss, weights, learning rate, training; key terms such as *gradient descent*, *loss function*, *weights*, *learning rate*, *overshoot*, *converge*, *training*; quiz questions you can answer from the paragraph above.
+**What you should see roughly:** a short Vietnamese summary mentioning gradient descent, loss, weights, learning rate, training; key terms such as *gradient descent*, *loss function*, *weights*, *learning rate*, *overshoot*, *converge*, *training*; quiz questions you can answer from the paragraph above; and VALSEA context such as semantic tags, clarified text, formatted notes, or English translation when the API key is configured.
 
 ## Persistence (Supabase)
 
@@ -207,8 +274,50 @@ After that, **`GET /health`** should indicate persistence appropriately (e.g. `p
 │   └── supabase/migrations/
 ├── package.json            # workspaces + dev/start scripts
 ├── package-lock.json
+├── about.md                # Devpost submission draft
+├── demo-live-script.md     # 5-minute live demo script
+├── script.md               # 2–3 minute video script
 └── .env.example            # Reference for all variables
 ```
+
+Important server files:
+
+- `server/src/index.ts` — Fastify REST routes and WebSocket gateway.
+- `server/src/valseaRealtimeClient.ts` — VALSEA realtime session, message normalization, `audio.append`, `audio.commit`, `session.stop`.
+- `server/src/valseaBatchClient.ts` — VALSEA upload fallback.
+- `server/src/valseaTextClient.ts` — VALSEA annotations, clarifications, translations, formatting.
+- `server/src/transcriptProcessor.ts` — partial deduplication, final chunking, force flush.
+- `server/src/intelligence.ts` — LLM prompts, JSON coercion, full notes, live chunk assist.
+- `server/src/hybridStore.ts` — memory + optional Supabase persistence.
+
+## Deployment notes
+
+Recommended split:
+
+- **Frontend:** Vercel, root directory `client/`
+- **Gateway:** Render/Railway/Fly, root directory `server/`
+- **Database:** Supabase, optional
+
+Frontend production variables:
+
+```env
+NEXT_PUBLIC_GATEWAY_URL=https://YOUR-GATEWAY.example.com
+NEXT_PUBLIC_WS_URL=wss://YOUR-GATEWAY.example.com/ws
+```
+
+Gateway production variables:
+
+```env
+VALSEA_API_KEY=
+LLM_API_KEY=
+LLM_BASE_URL=https://api.openai.com/v1
+LLM_MODEL=gpt-4o-mini
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+PORT=3001
+```
+
+Use `wss://` for `NEXT_PUBLIC_WS_URL` in production.
 
 ## Troubleshooting
 
@@ -216,6 +325,9 @@ After that, **`GET /health`** should indicate persistence appropriately (e.g. `p
 - **Generate notes fails:** Set `LLM_API_KEY` in **`server/.env`**; verify `LLM_BASE_URL` / `LLM_MODEL` for your provider.
 - **UI cannot connect:** Ensure gateway is on port **3001** (or set `PORT` + matching `NEXT_PUBLIC_*` in **`client/.env.local`**).
 - **CORS / wrong API host:** `NEXT_PUBLIC_GATEWAY_URL` must match where Fastify listens (scheme + host + port).
+- **WebSocket works locally but not deployed:** Use `wss://`, verify the gateway host supports WebSocket upgrades, and check CORS / reverse proxy settings.
+- **VALSEA text context missing:** Check `VALSEA_API_KEY`; `output.valsea.errors` may show which text API failed.
+- **Session list is empty after restart:** Memory store was used; configure Supabase for durable persistence.
 
 ## Acceptance checklist
 
@@ -228,14 +340,32 @@ The build meets the intended demo when:
 5. Transcript appears live on screen.
 6. User can trigger **Generate notes**.
 7. Structured learning output appears (summary, terms, explanation, quiz, etc.).
-8. The [demo script](#demo-script-testing) yields coherent summary, key terms, and quiz.
-9. Failed realtime connection shows a visible error.
-10. Batch upload fallback works or has a clear path (upload → transcribe → notes).
-11. API keys are **not** exposed in the frontend bundle.
-12. This README is enough to install and run the stack.
+8. VALSEA Learning Context appears when configured (semantic tags, formatted notes, translation, or visible per-call errors).
+9. The [demo script](#demo-script-testing) yields coherent summary, key terms, and quiz.
+10. Failed realtime connection shows a visible error.
+11. Batch upload fallback works or has a clear path (upload → transcribe → notes).
+12. Confusion marking works via WebSocket or HTTP fallback.
+13. Export `.md` / `.json` works.
+14. `/session` and `/session/[id]` show saved data.
+15. API keys are **not** exposed in the frontend bundle.
+16. This README is enough to install and run the stack.
 
 ## Hackathon definition of done
 
-A judge should be able to: open the app → start capture → speak or play a Vietnamese–English snippet → see transcript → click **Generate notes** → see summary, key terms, explanation, and quiz — and understand that **VALSEA** powers the speech layer.
+A judge should be able to: open the app → start capture → speak or play a Vietnamese–English snippet → see transcript → click **Generate notes** → see summary, key terms, explanation, English recap, quiz, VALSEA semantic context, export, and session history — and understand that **VALSEA** powers both the speech layer and the semantic enrichment layer.
 
 **One-line pitch:** VALSEA handles the hard voice layer (Vietnamese, Vietnamese-accented English, code-switching); this app turns that stream into structured learning artifacts students can use immediately.
+
+## Judge takeaway
+
+Classroom Copilot is not a generic chatbot. It is a working end-to-end classroom system:
+
+```text
+Vietnamese–English lecture speech
+  → VALSEA realtime / batch transcription
+  → VALSEA semantic enrichment
+  → grounded LLM learning output
+  → live transcript, explanations, notes, quizzes, exports, and session review
+```
+
+The core value is that VALSEA handles the difficult speech and language layer, while the application turns that stream into structured support for real students in Vietnamese university classrooms.

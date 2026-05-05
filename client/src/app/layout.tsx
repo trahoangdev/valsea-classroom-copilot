@@ -8,6 +8,13 @@ import { inter } from "@/lib/fonts";
 export const metadata: Metadata = {
   title: "VALSEA · Classroom Copilot",
   description: "A classroom copilot that turns Vietnamese-English lecture speech into structured learning notes, explanations, and quizzes.",
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.png", sizes: "32x32", type: "image/png" },
+    ],
+    shortcut: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
