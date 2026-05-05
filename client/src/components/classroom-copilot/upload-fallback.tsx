@@ -5,6 +5,7 @@ import { Upload } from "lucide-react";
 import { transcribeUpload, type TranscribeUploadLanguage } from "@/lib/classroom/api";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 
 type Props = {
   httpBase: string;
@@ -26,6 +27,7 @@ export function UploadFallback({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [label, setLabel] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadLanguage, setUploadLanguage] = useState<TranscribeUploadLanguage>("vietnamese");
 
   return (
@@ -42,8 +44,9 @@ export function UploadFallback({
           if (!file) return;
           setLabel(file.name);
           setUploading(true);
+          setUploadProgress(0);
           try {
-            const res = await transcribeUpload(httpBase, file, sessionId, uploadLanguage);
+            const res = await transcribeUpload(httpBase, file, sessionId, uploadLanguage, setUploadProgress);
             if (res.error) {
               onError(res.error);
               return;
@@ -51,6 +54,7 @@ export function UploadFallback({
             if (res.text) onTranscript(res.text);
           } finally {
             setUploading(false);
+            setUploadProgress(0);
           }
         }}
       />
@@ -87,6 +91,17 @@ export function UploadFallback({
           </span>
         ) : null}
       </div>
+      {uploading ? (
+        <div className="w-full max-w-sm space-y-1 sm:text-right" role="status" aria-live="polite">
+          <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+            <span className="truncate" title={label ?? undefined}>
+              {label ?? "Uploading audio"}
+            </span>
+            <span className="font-medium text-foreground">{uploadProgress}%</span>
+          </div>
+          <Progress value={uploadProgress} aria-label="Audio upload progress" />
+        </div>
+      ) : null}
       <p className="max-w-sm text-xs leading-snug text-muted-foreground sm:text-right">
         {/* Powered by VALSEA Batch. Upload audio replaces the current transcript
         {willReplace ? " and clears generated notes." : "."} */}
