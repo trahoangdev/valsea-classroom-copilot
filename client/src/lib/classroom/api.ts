@@ -87,15 +87,38 @@ export async function transcribeUpload(
   httpBase: string,
   file: File,
   sessionId: string,
-  language: TranscribeUploadLanguage = "vietnamese"
+  language: TranscribeUploadLanguage = "vietnamese",
+  onUploadProgress?: (progress: number) => void
 ): Promise<{ text?: string; error?: string }> {
-  const form = new FormData();
-  form.set("file", file);
-  const url = `${httpBase.replace(/\/$/, "")}/api/transcribe?sessionId=${encodeURIComponent(sessionId)}&language=${encodeURIComponent(language)}`;
-  const res = await fetch(url, { method: "POST", body: form });
-  const data = (await res.json()) as { text?: string; error?: string };
-  if (!res.ok) {
-    return { error: data.error ?? `HTTP ${res.status}` };
-  }
-  return { text: data.text };
+  return new Promise((resolve) => {
+    const form = new FormData();
+    form.set("file", file);
+    const url = `${httpBase.replace(/\/$/, "")}/api/transcribe?sessionId=${encodeURIComponent(sessionId)}&language=${encodeURIComponent(language)}`;
+    const xhr = new XMLHttpRequest();
+
+    xhr.upload.onprogress = (event) => {
+      if (!event.lengthComputable) return;
+      onUploadProgress?.(Math.min(100, Math.round((event.loaded / event.total) * 100)));
+    };
+
+    xhr.onload = () => {
+      let data: { text?: string; error?: string } = {};
+      try {
+        data = JSON.parse(xhr.responseText || "{}") as { text?: string; error?: string };
+      } catch {
+        data = { error: "Invalid gateway response" };
+      }
+      if (xhr.status < 200 || xhr.status >= 300) {
+        resolve({ error: data.error ?? `HTTP ${xhr.status}` });
+        return;
+      }
+      resolve({ text: data.text });
+    };
+
+    xhr.onerror = () => resolve({ error: "Upload failed" });
+    xhr.onabort = () => resolve({ error: "Upload cancelled" });
+
+    xhr.open("POST", url);
+    xhr.send(form);
+  });
 }
