@@ -1,183 +1,101 @@
-"use client"
+"use client";
 
+import Link from "next/link";
 import {
-  BarChart3,
-  Zap,
-  Users,
   ArrowRight,
-  Database,
-  Package,
-  Crown,
-  Layout,
-  Palette
-} from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Image3D } from '@/components/image-3d'
-
-const mainFeatures = [
-  {
-    icon: Package,
-    title: 'Curated Component Library',
-    description: 'Hand-picked blocks and templates for quality and reliability.'
-  },
-  {
-    icon: Crown,
-    title: 'Free & Premium Options',
-    description: 'Start free, upgrade to premium collections when you need more.'
-  },
-  {
-    icon: Layout,
-    title: 'Ready-to-Use Templates',
-    description: 'Copy-paste components that just work out of the box.'
-  },
-  {
-    icon: Zap,
-    title: 'Regular Updates',
-    description: 'New blocks and templates added weekly to keep you current.'
-  }
-]
-
-const secondaryFeatures = [
-  {
-    icon: BarChart3,
-    title: 'Multiple Frameworks',
-    description: 'React, Next.js, and Vite compatibility for flexible development.'
-  },
-  {
-    icon: Palette,
-    title: 'Modern Tech Stack',
-    description: 'Built with shadcn/ui, Tailwind CSS, and TypeScript.'
-  },
-  {
-    icon: Users,
-    title: 'Responsive Design',
-    description: 'Mobile-first components for all screen sizes and devices.'
-  },
-  {
-    icon: Database,
-    title: 'Developer-Friendly',
-    description: 'Clean code, well-documented, easy integration and customization.'
-  }
-]
+  FileAudio,
+  Languages,
+  ListTree,
+  MessageCircleQuestion,
+  Mic2,
+  ScanText,
+  Tags,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useLandingLocale } from "../landing-locale-context";
+import type { LandingKey } from "../landing-translations";
 
 export function FeaturesSection() {
+  const { t } = useLandingLocale();
+
+  const endpoints: {
+    icon: typeof Mic2;
+    title: string;
+    descKey: LandingKey;
+  }[] = [
+    { icon: Mic2, title: "Realtime ASR", descKey: "featRealtimeDesc" },
+    { icon: FileAudio, title: "Batch transcription", descKey: "featBatchDesc" },
+    { icon: Tags, title: "Annotations", descKey: "featAnnotDesc" },
+    { icon: MessageCircleQuestion, title: "Clarifications", descKey: "featClarifyDesc" },
+    { icon: Languages, title: "Translations", descKey: "featTranslateDesc" },
+    { icon: ListTree, title: "Formatting", descKey: "featFormatDesc" },
+  ];
+
+  const workflow: { step: string; titleKey: LandingKey; bodyKey: LandingKey }[] = [
+    { step: "01", titleKey: "featWf1Title", bodyKey: "featWf1Body" },
+    { step: "02", titleKey: "featWf2Title", bodyKey: "featWf2Body" },
+    { step: "03", titleKey: "featWf3Title", bodyKey: "featWf3Body" },
+  ];
+
   return (
     <section id="features" className="py-24 sm:py-32 bg-muted/30">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
         <div className="mx-auto max-w-2xl text-center mb-16">
-          <Badge variant="outline" className="mb-4">Marketplace Features</Badge>
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
-            Everything you need to build amazing web applications
+          <Badge variant="outline" className="mb-4">
+            {t("featBadge")}
+          </Badge>
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4 text-balance">
+            {t("featTitle")}
           </h2>
-          <p className="text-lg text-muted-foreground">
-            Our marketplace provides curated blocks, templates, landing pages, and admin dashboards to help you build professional applications faster than ever.
-          </p>
+          <p className="text-lg text-muted-foreground text-pretty">{t("featLead")}</p>
         </div>
 
-        {/* First Feature Section */}
-        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-8 xl:gap-16 mb-24">
-          {/* Left Image */}
-          <Image3D
-            lightSrc="/feature-1-light.png"
-            darkSrc="/feature-1-dark.png"
-            alt="Analytics dashboard"
-            direction="left"
-          />
-          {/* Right Content */}
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <h3 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
-                Components that accelerate development
-              </h3>
-              <p className="text-muted-foreground text-base text-pretty">
-                Our curated marketplace offers premium blocks and templates designed to save time and ensure consistency across your admin projects.
-              </p>
-            </div>
-
-            <ul className="grid gap-4 sm:grid-cols-2">
-              {mainFeatures.map((feature, index) => (
-                <li key={index} className="group hover:bg-accent/5 flex items-start gap-3 p-2 rounded-lg transition-colors">
-                  <div className="mt-0.5 flex shrink-0 items-center justify-center">
-                    <feature.icon className="size-5 text-primary" aria-hidden="true" />
+        <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6 mb-20">
+          {endpoints.map((item) => (
+            <Card key={item.title} className="border-border/80 bg-card/80 backdrop-blur-sm">
+              <CardHeader className="pb-2">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
+                    <item.icon className="size-5" aria-hidden />
                   </div>
-                  <div>
-                    <h3 className="text-foreground font-medium">{feature.title}</h3>
-                    <p className="text-muted-foreground mt-1 text-sm">{feature.description}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-
-            <div className="flex flex-col sm:flex-row gap-4 pe-4 pt-2">
-              <Button size="lg" className="cursor-pointer">
-                <a href="https://shadcnstore.com/templates" className='flex items-center'>
-                  Browse Templates
-                  <ArrowRight className="ms-2 size-4" aria-hidden="true" />
-                </a>
-              </Button>
-              <Button size="lg" variant="outline" className="cursor-pointer">
-                <a href="https://shadcnstore.com/blocks">
-                  View Components
-                </a>
-              </Button>
-            </div>
-          </div>
+                  <CardTitle className="text-base font-semibold leading-snug">{item.title}</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground text-pretty">{t(item.descKey)}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        {/* Second Feature Section - Flipped Layout */}
-        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-8 xl:gap-16">
-          {/* Left Content */}
-          <div className="space-y-6 order-2 lg:order-1">
-            <div className="space-y-4">
-              <h3 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
-                Built for modern development workflows
-              </h3>
-              <p className="text-muted-foreground text-base text-pretty">
-                Every component follows best practices with TypeScript, responsive design, and clean code architecture that integrates seamlessly into your projects.
-              </p>
-            </div>
-
-            <ul className="grid gap-4 sm:grid-cols-2">
-              {secondaryFeatures.map((feature, index) => (
-                <li key={index} className="group hover:bg-accent/5 flex items-start gap-3 p-2 rounded-lg transition-colors">
-                  <div className="mt-0.5 flex shrink-0 items-center justify-center">
-                    <feature.icon className="size-5 text-primary" aria-hidden="true" />
-                  </div>
-                  <div>
-                    <h3 className="text-foreground font-medium">{feature.title}</h3>
-                    <p className="text-muted-foreground mt-1 text-sm">{feature.description}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-
-            <div className="flex flex-col sm:flex-row gap-4 pe-4 pt-2">
-              <Button size="lg" className="cursor-pointer">
-                <a href="#" className='flex items-center'>
-                  View Documentation
-                  <ArrowRight className="ms-2 size-4" aria-hidden="true" />
-                </a>
-              </Button>
-              <Button size="lg" variant="outline" className="cursor-pointer">
-                <a href="https://github.com/silicondeck/shadcn-dashboard-landing-template" target="_blank" rel="noopener noreferrer">
-                  GitHub Repository
-                </a>
-              </Button>
-            </div>
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center gap-2 mb-6 justify-center">
+            <ScanText className="size-5 text-primary" />
+            <h3 className="text-xl font-semibold text-center sm:text-2xl">{t("featFlowTitle")}</h3>
           </div>
-
-          {/* Right Image */}
-          <Image3D
-            lightSrc="/feature-2-light.png"
-            darkSrc="/feature-2-dark.png"
-            alt="Performance dashboard"
-            direction="right"
-            className="order-1 lg:order-2"
-          />
+          <div className="grid md:grid-cols-3 gap-6">
+            {workflow.map((w) => (
+              <Card key={w.step} className="bg-background/80">
+                <CardContent className="pt-6">
+                  <p className="text-xs font-mono text-primary mb-2">{w.step}</p>
+                  <p className="font-medium mb-2">{t(w.titleKey)}</p>
+                  <p className="text-sm text-muted-foreground text-pretty">{t(w.bodyKey)}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="flex justify-center mt-10">
+            <Button size="lg" className="cursor-pointer" asChild>
+              <Link href="/classroom-copilot">
+                {t("featOpenApp")}
+                <ArrowRight className="ms-2 size-4" />
+              </Link>
+            </Button>
+          </div>
         </div>
       </div>
     </section>
-  )
+  );
 }

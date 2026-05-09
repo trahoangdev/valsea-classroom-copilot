@@ -25,13 +25,14 @@ import type {
   SessionUiStatus,
 } from "@/lib/classroom/types";
 import { connectGateway, sendJson } from "@/lib/classroom/websocket";
+import { randomUUID } from "@/lib/random-uuid";
 
 const HTTP_BASE =
   process.env.NEXT_PUBLIC_GATEWAY_URL?.replace(/\/$/, "") ?? "http://localhost:3001";
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:3001/ws";
 
 export default function ClassroomCopilotPage() {
-  const [sessionId, setSessionId] = useState(() => crypto.randomUUID());
+  const [sessionId, setSessionId] = useState(() => randomUUID());
   const [status, setStatus] = useState<SessionUiStatus>("idle");
   const [partial, setPartial] = useState("");
   const [finals, setFinals] = useState<{ id: string; text: string }[]>([]);
@@ -264,7 +265,7 @@ export default function ClassroomCopilotPage() {
     }
     micStartedRef.current = false;
     setMicActive(false);
-    setSessionId(crypto.randomUUID());
+    setSessionId(randomUUID());
     setPartial("");
     setFinals([]);
     setLearning(null);
@@ -341,7 +342,7 @@ export default function ClassroomCopilotPage() {
   const onUploadTranscript = useCallback(
     (text: string) => {
       setPartial("");
-      setFinals([{ id: crypto.randomUUID(), text }]);
+      setFinals([{ id: randomUUID(), text }]);
       setLearning(null);
       setLiveAssistEntries([]);
       lastAutoTranscriptSigRef.current = "";
@@ -359,7 +360,7 @@ export default function ClassroomCopilotPage() {
         return;
       }
       setPartial("");
-      setFinals([{ id: crypto.randomUUID(), text: DEMO_SCRIPT_VI }]);
+      setFinals([{ id: randomUUID(), text: DEMO_SCRIPT_VI }]);
       setLearning(null);
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : "Could not send demo script");

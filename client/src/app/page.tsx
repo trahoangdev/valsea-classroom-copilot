@@ -1,22 +1,32 @@
-"use client";
+import type { Metadata } from "next";
+import { LandingPageContent } from "./landing/landing-page-content";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+export const metadata: Metadata = {
+  title: "Classroom Copilot — Trợ lý lớp học Việt–Anh với VALSEA",
+  description:
+    "Nghe bài giảng trực tiếp, transcript realtime, ghi chú có cấu trúc, giải thích và quiz — tích hợp sâu 6 endpoint VALSEA cho lớp đại học song ngữ.",
+  keywords: [
+    "VALSEA",
+    "classroom copilot",
+    "ASR",
+    "transcript",
+    "Vietnamese English",
+    "lecture assistant",
+  ],
+  openGraph: {
+    title: "Classroom Copilot — VALSEA",
+    description:
+      "Speech-first classroom copilot: realtime ASR, clarifications, translations, structured notes.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Classroom Copilot — VALSEA",
+    description:
+      "Trợ lý học tập nghe bài giảng trực tiếp cho sinh viên Việt Nam — tích hợp VALSEA.",
+  },
+};
 
 export default function HomePage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace("/classroom-copilot");
-  }, [router]);
-
-  // Show a loading state while redirecting
-  return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-        <p className="text-muted-foreground mt-2">Redirecting to Classroom Copilot…</p>
-      </div>
-    </div>
-  );
+  return <LandingPageContent />;
 }
