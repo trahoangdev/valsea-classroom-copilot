@@ -170,3 +170,47 @@ html {
 .animate-logo-scroll:hover {
   animation-play-state: paused;
 }
+
+/* Hero mock preview — transcript / assistant demo */
+@keyframes hero-mock-caret {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.hero-mock-caret {
+  animation: hero-mock-caret 1s step-end infinite;
+}
+
+@keyframes hero-mock-bullet-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-mock-bullet-in {
+  animation: hero-mock-bullet-in 0.5s ease-out forwards;
+  animation-delay: var(--hero-bullet-delay, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-mock-caret,
+  .hero-mock-bullet-in {
+    animation: none !important;
+  }
+
+  .hero-mock-bullet-in {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

@@ -1,23 +1,32 @@
-import type { Metadata } from 'next'
-import { LandingPageContent } from './landing-page-content'
+import type { Metadata } from "next";
+import { LandingPageContent } from "./landing-page-content";
 
-// Metadata for the landing page
 export const metadata: Metadata = {
-  title: 'ShadcnStore - Modern Admin Dashboard Template',
-  description: 'A beautiful and comprehensive admin dashboard template built with React, Next.js, TypeScript, and shadcn/ui. Perfect for building modern web applications.',
-  keywords: ['admin dashboard', 'react', 'nextjs', 'typescript', 'shadcn/ui', 'tailwind css'],
+  title: "Classroom Copilot — Trợ lý lớp học Việt–Anh với VALSEA",
+  description:
+    "Nghe bài giảng trực tiếp, transcript realtime, ghi chú có cấu trúc, giải thích và quiz — tích hợp sâu 6 endpoint VALSEA cho lớp đại học song ngữ.",
+  keywords: [
+    "VALSEA",
+    "classroom copilot",
+    "ASR",
+    "transcript",
+    "Vietnamese English",
+    "lecture assistant",
+  ],
   openGraph: {
-    title: 'ShadcnStore - Modern Admin Dashboard Template',
-    description: 'A beautiful and comprehensive admin dashboard template built with React, Next.js, TypeScript, and shadcn/ui.',
-    type: 'website',
+    title: "Classroom Copilot — VALSEA",
+    description:
+      "Speech-first classroom copilot: realtime ASR, clarifications, translations, structured notes.",
+    type: "website",
   },
   twitter: {
-    card: 'summary_large_image',
-    title: 'ShadcnStore - Modern Admin Dashboard Template',
-    description: 'A beautiful and comprehensive admin dashboard template built with React, Next.js, TypeScript, and shadcn/ui.',
+    card: "summary_large_image",
+    title: "Classroom Copilot — VALSEA",
+    description:
+      "Trợ lý học tập nghe bài giảng trực tiếp cho sinh viên Việt Nam — tích hợp VALSEA.",
   },
-}
+};
 
 export default function LandingPage() {
-  return <LandingPageContent />
+  return <LandingPageContent />;
 }
